@@ -1,0 +1,234 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { profileQuery, pocketsQuery, cardsQuery, flowsQuery } from "@/lib/queries";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { money, pct } from "@/lib/format";
+import { compoundDaily, graceInfo, daysUntilPayday } from "@/lib/finance";
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
+import { TrendingUp, CreditCard, Wallet, Calendar } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Panel — FinFlow" },
+      { name: "description", content: "Vista general de tus finanzas: bolsillos, tarjetas y rendimiento." },
+    ],
+  }),
+  loader: ({ context }) => {
+    context.queryClient.ensureQueryData(profileQuery());
+    context.queryClient.ensureQueryData(pocketsQuery());
+    context.queryClient.ensureQueryData(cardsQuery());
+    context.queryClient.ensureQueryData(flowsQuery());
+  },
+  component: Dashboard,
+});
+
+function Dashboard() {
+  const { data: profile } = useSuspenseQuery(profileQuery());
+  const { data: pockets } = useSuspenseQuery(pocketsQuery());
+  const { data: cards } = useSuspenseQuery(cardsQuery());
+  const { data: flows } = useSuspenseQuery(flowsQuery());
+
+  const totalBalance = pockets.reduce((s, p) => s + Number(p.current_balance), 0);
+  const totalPct = pockets.reduce((s, p) => s + Number(p.target_percentage), 0);
+  const annualRate = Number(profile?.annual_yield_rate ?? 15);
+  const invisibleCash = cards.reduce((s, c) => s + (Number(c.credit_limit) - Number(c.current_balance)), 0);
+  const salary = Number(profile?.biweekly_salary ?? 0);
+  const paydayIn = daysUntilPayday([15, 30]);
+
+  const projectionData = [30, 60, 90, 180, 365].map((d) => ({
+    day: `${d}d`,
+    balance: Math.round(compoundDaily(totalBalance, annualRate, d)),
+  }));
+
+  const upcomingFlows = flows
+    .filter((f) => f.next_execution_date)
+    .slice(0, 5);
+
+  return (
+    <div className="p-4 md:p-8 space-y-6">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold">Hola{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
+        <p className="text-muted-foreground text-sm">Tu panorama financiero de hoy</p>
+      </div>
+
+      {/* Hero stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatCard icon={Wallet} label="Balance total" value={money(totalBalance)} accent="text-primary" />
+        <StatCard icon={TrendingUp} label={`Proyección 30d (${pct(annualRate)})`} value={money(compoundDaily(totalBalance, annualRate, 30))} accent="text-primary" />
+        <StatCard icon={CreditCard} label="Invisible Cash disponible" value={money(invisibleCash)} accent="text-accent" />
+        <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={money(salary)} accent="text-warning" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Allocation */}
+        <Card className="p-5 lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold">Distribución por bolsillos</h2>
+              <p className="text-xs text-muted-foreground">
+                Total {pct(totalPct)} asignado {totalPct !== 100 && "· ajusta a 100%"}
+              </p>
+            </div>
+            <Link to="/pockets" className="text-xs text-primary hover:underline">Gestionar</Link>
+          </div>
+          {pockets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Cargando bolsillos por defecto…</p>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-6 items-center">
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pockets}
+                      dataKey="target_percentage"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={2}
+                    >
+                      {pockets.map((p) => (
+                        <Cell key={p.id} fill={p.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      formatter={(v: number) => `${v}%`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                {pockets.map((p) => {
+                  const target = (salary * Number(p.target_percentage)) / 100;
+                  return (
+                    <div key={p.id} className="text-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: p.color }} />
+                          <span>{p.name}</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {money(p.current_balance)} · {money(target)}/qna
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Yield projection */}
+        <Card className="p-5">
+          <div className="mb-4">
+            <h2 className="font-semibold">Rendimiento compuesto</h2>
+            <p className="text-xs text-muted-foreground">Sobre balance actual · {pct(annualRate)}</p>
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={projectionData}>
+                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} width={70} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  formatter={(v: number) => money(v)}
+                />
+                <Line type="monotone" dataKey="balance" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      {/* Cards + flows */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Tarjetas · Periodo de gracia</h2>
+            <Link to="/cards" className="text-xs text-primary hover:underline">Ver todas</Link>
+          </div>
+          {cards.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aún no has agregado tarjetas.</p>
+          ) : (
+            <div className="space-y-4">
+              {cards.map((c) => {
+                const g = graceInfo(c.cutoff_day, c.due_day);
+                const daysLeft = Math.max(0, g.daysToCutoff);
+                const pctLeft = Math.round(((g.maxFloat - daysLeft) / g.maxFloat) * 100);
+                return (
+                  <div key={c.id} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{c.card_name}</span>
+                      <span className="text-muted-foreground">
+                        {daysLeft}d al corte · {g.daysToDue}d al pago
+                      </span>
+                    </div>
+                    <Progress value={pctLeft} />
+                    <div className="text-xs text-muted-foreground">
+                      Disponible sin intereses: {money(Number(c.credit_limit) - Number(c.current_balance))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Próximos flujos</h2>
+            <Link to="/flows" className="text-xs text-primary hover:underline">Gestionar</Link>
+          </div>
+          {upcomingFlows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin flujos programados.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {upcomingFlows.map((f) => (
+                <li key={f.id} className="py-2 flex items-center justify-between text-sm">
+                  <div>
+                    <div className="font-medium">{f.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {f.next_execution_date} · {f.frequency}
+                    </div>
+                  </div>
+                  <span className={f.flow_type === "deposit" ? "text-primary" : "text-destructive"}>
+                    {f.flow_type === "deposit" ? "+" : "−"}
+                    {money(f.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: string;
+}) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <Icon className={`h-4 w-4 ${accent ?? "text-muted-foreground"}`} />
+      </div>
+      <div className="mt-2 text-xl md:text-2xl font-bold">{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+    </Card>
+  );
+}
