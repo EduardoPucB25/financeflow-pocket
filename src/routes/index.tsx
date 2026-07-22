@@ -4,7 +4,7 @@ import { TrendingUp, CreditCard, Wallet, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FinFlow Copilot — Ingeniería financiera personal" },
+      { title: "FinFlowPoket" },
       {
         name: "description",
         content:

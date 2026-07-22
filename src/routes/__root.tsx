@@ -81,23 +81,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FinFlow Copilot — Ingeniería financiera personal" },
+      { title: "FinFlowPoket" },
       {
         name: "description",
         content:
-          "Optimiza cada peso: bolsillos de asignación, rendimientos diarios compuestos y estrategia de flotación de tarjetas.",
+          "Maximiza rendimientos diarios, optimiza el periodo de gracia de tus tarjetas y distribuye tu dinero con inteligencia.",
       },
-      { property: "og:title", content: "FinFlow Copilot" },
+      { property: "og:title", content: "FinFlowPoket" },
       {
         property: "og:description",
-        content: "Motor de ingeniería financiera personal.",
+        content: "Maximiza rendimientos diarios, optimiza el periodo de gracia de tus tarjetas y distribuye tu dinero con inteligencia.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "FinFlowPoket" },
+      { name: "twitter:description", content: "Maximiza rendimientos diarios, optimiza el periodo de gracia de tus tarjetas y distribuye tu dinero con inteligencia." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d9306818-6c19-4502-9c06-db5960b071a2" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d9306818-6c19-4502-9c06-db5960b071a2" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
