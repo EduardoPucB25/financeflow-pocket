@@ -14,7 +14,209 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credit_cards: {
+        Row: {
+          card_name: string
+          created_at: string
+          credit_limit: number
+          current_balance: number
+          cutoff_day: number
+          due_day: number
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_name: string
+          created_at?: string
+          credit_limit?: number
+          current_balance?: number
+          cutoff_day: number
+          due_day: number
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_name?: string
+          created_at?: string
+          credit_limit?: number
+          current_balance?: number
+          cutoff_day?: number
+          due_day?: number
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pockets: {
+        Row: {
+          color: string
+          created_at: string
+          current_balance: number
+          id: string
+          is_locked_savings: boolean
+          name: string
+          sort_order: number
+          target_percentage: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          is_locked_savings?: boolean
+          name: string
+          sort_order?: number
+          target_percentage?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          is_locked_savings?: boolean
+          name?: string
+          sort_order?: number
+          target_percentage?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          annual_yield_rate: number
+          biweekly_salary: number
+          created_at: string
+          full_name: string | null
+          id: string
+          salary_frequency: string
+          updated_at: string
+        }
+        Insert: {
+          annual_yield_rate?: number
+          biweekly_salary?: number
+          created_at?: string
+          full_name?: string | null
+          id: string
+          salary_frequency?: string
+          updated_at?: string
+        }
+        Update: {
+          annual_yield_rate?: number
+          biweekly_salary?: number
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          salary_frequency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scheduled_flows: {
+        Row: {
+          amount: number
+          created_at: string
+          day_of_month: number | null
+          day_of_week: number | null
+          flow_type: string
+          frequency: string
+          id: string
+          next_execution_date: string | null
+          pocket_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          flow_type: string
+          frequency: string
+          id?: string
+          next_execution_date?: string | null
+          pocket_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          flow_type?: string
+          frequency?: string
+          id?: string
+          next_execution_date?: string | null
+          pocket_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_flows_pocket_id_fkey"
+            columns: ["pocket_id"]
+            isOneToOne: false
+            referencedRelation: "pockets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      yield_simulations: {
+        Row: {
+          annual_rate: number
+          created_at: string
+          deposit_amount: number
+          deposit_freq: string
+          horizon_months: number
+          id: string
+          initial_balance: number
+          title: string
+          user_id: string
+          withdrawal_amount: number
+          withdrawal_freq: string
+        }
+        Insert: {
+          annual_rate: number
+          created_at?: string
+          deposit_amount?: number
+          deposit_freq?: string
+          horizon_months?: number
+          id?: string
+          initial_balance: number
+          title: string
+          user_id: string
+          withdrawal_amount?: number
+          withdrawal_freq?: string
+        }
+        Update: {
+          annual_rate?: number
+          created_at?: string
+          deposit_amount?: number
+          deposit_freq?: string
+          horizon_months?: number
+          id?: string
+          initial_balance?: number
+          title?: string
+          user_id?: string
+          withdrawal_amount?: number
+          withdrawal_freq?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
