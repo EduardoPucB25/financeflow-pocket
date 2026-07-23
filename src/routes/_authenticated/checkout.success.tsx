@@ -16,6 +16,25 @@ export const Route = createFileRoute("/_authenticated/checkout/success")({
 });
 
 function SuccessPage() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    // Webhook may take a moment; poll the subscription query a few times so the
+    // UI reflects the new Pro state as soon as the row lands.
+    let cancelled = false;
+    let attempts = 0;
+    const tick = () => {
+      if (cancelled) return;
+      qc.invalidateQueries({ queryKey: ["subscription"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      attempts += 1;
+      if (attempts < 6) setTimeout(tick, 1500);
+    };
+    tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [qc]);
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="max-w-md w-full text-center">
