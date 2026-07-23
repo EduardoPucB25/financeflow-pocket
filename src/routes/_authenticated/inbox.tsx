@@ -131,7 +131,7 @@ function InboxPage() {
                       {meta.label} · {new Date(d.detected_at).toLocaleString("es-MX")}
                     </div>
                     <div className="mt-1 font-semibold text-lg">
-                      {d.amount != null ? money(d.amount, d.currency) : "—"}
+                      {d.amount != null ? money(d.amount) : "—"}
                       {d.merchant && (
                         <span className="ml-2 text-base font-normal text-muted-foreground">
                           {d.merchant}
@@ -186,7 +186,7 @@ function InboxPage() {
                 {d.merchant ?? d.raw_text.slice(0, 60)}
               </div>
               <div className="text-muted-foreground text-xs">
-                {d.amount != null ? money(d.amount, d.currency) : "—"}
+                {d.amount != null ? money(d.amount) : "—"}
               </div>
             </div>
           ))}
