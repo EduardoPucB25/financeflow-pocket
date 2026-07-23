@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { debtsQuery } from "@/lib/queries";
+import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { debtsQuery, profileQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus, FREE_LIMITS, limitForFree } from "@/lib/subscription";
+import { HiddenByPlanNotice } from "@/components/PastDueBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { money, pct } from "@/lib/format";
 import { graceInfo } from "@/lib/finance";
-import { CreditCard, Plus, Trash2, Pencil, Landmark, Wallet, Home } from "lucide-react";
+import { CreditCard, Plus, Trash2, Pencil, Landmark, Wallet, Home, Lock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
