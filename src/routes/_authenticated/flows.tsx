@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { money } from "@/lib/format";
-import { Plus, Trash2, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { Plus, Trash2, ArrowDownRight, ArrowUpRight, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +26,30 @@ export const Route = createFileRoute("/_authenticated/flows")({
   },
   component: FlowsPage,
 });
+
+type Pocket = { id: string; name: string };
+type FlowRow = {
+  id: string;
+  title: string;
+  amount: number;
+  flow_type: string;
+  frequency: string;
+  pocket_id: string | null;
+  next_execution_date: string | null;
+  day_of_week: number | null;
+  day_of_month: number | null;
+};
+
+const FREQ_LABEL: Record<string, string> = {
+  daily: "Diario",
+  weekly: "Semanal",
+  weekly_dow: "Semanal (día)",
+  biweekly: "Quincenal",
+  monthly: "Mensual",
+  one_time: "Único",
+};
+
+const DOW_LABEL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function FlowsPage() {
   const { data: flows } = useSuspenseQuery(flowsQuery());
@@ -53,7 +77,7 @@ function FlowsPage() {
             <span className="text-destructive">{money(outflow)}</span>
           </p>
         </div>
-        <NewFlowDialog pockets={pockets} />
+        <FlowDialog mode="create" pockets={pockets} />
       </div>
 
       {flows.length === 0 ? (
@@ -62,69 +86,87 @@ function FlowsPage() {
         </Card>
       ) : (
         <Card className="divide-y divide-border">
-          {flows.map((f) => (
-            <div key={f.id} className="p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`h-9 w-9 rounded-full grid place-items-center ${
-                    f.flow_type === "deposit" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
-                  }`}
-                >
-                  {f.flow_type === "deposit" ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{f.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {f.frequency} · Próx: {f.next_execution_date ?? "—"}
+          {flows.map((f) => {
+            const freqDesc =
+              f.frequency === "weekly" && f.day_of_week !== null
+                ? `Semanal (${DOW_LABEL[f.day_of_week]})`
+                : f.frequency === "monthly" && f.day_of_month
+                  ? `Mensual (día ${f.day_of_month})`
+                  : FREQ_LABEL[f.frequency] ?? f.frequency;
+            return (
+              <div key={f.id} className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`h-9 w-9 rounded-full grid place-items-center ${
+                      f.flow_type === "deposit" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
+                    }`}
+                  >
+                    {f.flow_type === "deposit" ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{f.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {freqDesc} · Próx: {f.next_execution_date ?? "—"}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className={`font-semibold ${f.flow_type === "deposit" ? "text-primary" : "text-destructive"}`}>
-                  {f.flow_type === "deposit" ? "+" : "−"}
-                  {money(f.amount)}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className={`font-semibold ${f.flow_type === "deposit" ? "text-primary" : "text-destructive"}`}>
+                    {f.flow_type === "deposit" ? "+" : "−"}
+                    {money(f.amount)}
+                  </div>
+                  <FlowDialog mode="edit" pockets={pockets} flow={f as FlowRow} />
+                  <Button size="icon" variant="ghost" onClick={() => del.mutate(f.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => del.mutate(f.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </Card>
       )}
     </div>
   );
 }
 
-function NewFlowDialog({ pockets }: { pockets: { id: string; name: string }[] }) {
+function FlowDialog({ mode, pockets, flow }: { mode: "create" | "edit"; pockets: Pocket[]; flow?: FlowRow }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    title: "",
-    amount: 0,
-    flow_type: "withdrawal" as "deposit" | "withdrawal",
-    frequency: "weekly" as "weekly" | "biweekly" | "monthly" | "one_time",
-    pocket_id: "" as string,
-    next_execution_date: "",
+    title: flow?.title ?? "",
+    amount: Number(flow?.amount ?? 0),
+    flow_type: (flow?.flow_type ?? "withdrawal") as "deposit" | "withdrawal",
+    frequency: (flow?.frequency ?? "weekly") as "daily" | "weekly" | "biweekly" | "monthly" | "one_time",
+    pocket_id: flow?.pocket_id ?? "",
+    next_execution_date: flow?.next_execution_date ?? "",
+    day_of_week: flow?.day_of_week ?? 1,
+    day_of_month: flow?.day_of_month ?? 1,
   });
 
-  const create = useMutation({
+  const save = useMutation({
     mutationFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("No auth");
-      const { error } = await supabase.from("scheduled_flows").insert({
-        user_id: user.user.id,
+      const payload = {
         title: form.title,
         amount: form.amount,
         flow_type: form.flow_type,
         frequency: form.frequency,
         pocket_id: form.pocket_id || null,
         next_execution_date: form.next_execution_date || null,
-      });
-      if (error) throw error;
+        day_of_week: form.frequency === "weekly" ? form.day_of_week : null,
+        day_of_month: form.frequency === "monthly" ? form.day_of_month : null,
+      };
+      if (mode === "edit" && flow) {
+        const { error } = await supabase.from("scheduled_flows").update(payload).eq("id", flow.id);
+        if (error) throw error;
+      } else {
+        const { data: user } = await supabase.auth.getUser();
+        if (!user.user) throw new Error("No auth");
+        const { error } = await supabase.from("scheduled_flows").insert({ user_id: user.user.id, ...payload });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Flujo creado");
+      toast.success(mode === "edit" ? "Flujo actualizado" : "Flujo creado");
       qc.invalidateQueries({ queryKey: ["scheduled_flows"] });
       setOpen(false);
     },
@@ -134,13 +176,15 @@ function NewFlowDialog({ pockets }: { pockets: { id: string; name: string }[] })
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-1" /> Nuevo flujo
-        </Button>
+        {mode === "edit" ? (
+          <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
+        ) : (
+          <Button><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nuevo flujo programado</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Editar flujo" : "Nuevo flujo programado"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -167,6 +211,7 @@ function NewFlowDialog({ pockets }: { pockets: { id: string; name: string }[] })
               <Select value={form.frequency} onValueChange={(v) => setForm({ ...form, frequency: v as typeof form.frequency })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
                   <SelectItem value="weekly">Semanal</SelectItem>
                   <SelectItem value="biweekly">Quincenal</SelectItem>
                   <SelectItem value="monthly">Mensual</SelectItem>
@@ -178,12 +223,32 @@ function NewFlowDialog({ pockets }: { pockets: { id: string; name: string }[] })
               <Label>Próxima fecha</Label>
               <Input type="date" value={form.next_execution_date} onChange={(e) => setForm({ ...form, next_execution_date: e.target.value })} />
             </div>
+            {form.frequency === "weekly" && (
+              <div className="space-y-2 col-span-2">
+                <Label>Día de la semana</Label>
+                <Select value={String(form.day_of_week)} onValueChange={(v) => setForm({ ...form, day_of_week: Number(v) })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DOW_LABEL.map((label, i) => (
+                      <SelectItem key={i} value={String(i)}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {form.frequency === "monthly" && (
+              <div className="space-y-2 col-span-2">
+                <Label>Día del mes (1–31)</Label>
+                <Input type="number" min={1} max={31} value={form.day_of_month} onChange={(e) => setForm({ ...form, day_of_month: Number(e.target.value) })} />
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Bolsillo (opcional)</Label>
-            <Select value={form.pocket_id} onValueChange={(v) => setForm({ ...form, pocket_id: v })}>
+            <Select value={form.pocket_id || "__none"} onValueChange={(v) => setForm({ ...form, pocket_id: v === "__none" ? "" : v })}>
               <SelectTrigger><SelectValue placeholder="Sin bolsillo" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none">Sin bolsillo</SelectItem>
                 {pockets.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
@@ -192,8 +257,8 @@ function NewFlowDialog({ pockets }: { pockets: { id: string; name: string }[] })
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => create.mutate()} disabled={!form.title || create.isPending}>
-            Guardar
+          <Button onClick={() => save.mutate()} disabled={!form.title || save.isPending}>
+            {mode === "edit" ? "Actualizar" : "Guardar"}
           </Button>
         </DialogFooter>
       </DialogContent>

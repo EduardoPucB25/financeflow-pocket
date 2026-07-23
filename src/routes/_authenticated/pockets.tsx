@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { money, pct } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, Lock, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -80,9 +81,12 @@ function PocketsPage() {
                     </div>
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <EditPocketDialog pocket={p} />
+                  <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
               <div className="text-2xl font-bold">{money(p.current_balance)}</div>
               <div className="grid grid-cols-2 gap-2">
@@ -181,3 +185,77 @@ function NewPocketDialog() {
     </Dialog>
   );
 }
+
+type PocketRow = {
+  id: string;
+  name: string;
+  target_percentage: number;
+  color: string;
+  is_locked_savings: boolean;
+};
+
+function EditPocketDialog({ pocket }: { pocket: PocketRow }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: pocket.name,
+    target_percentage: Number(pocket.target_percentage),
+    color: pocket.color,
+    is_locked_savings: pocket.is_locked_savings,
+  });
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("pockets").update(form).eq("id", pocket.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Bolsillo actualizado");
+      qc.invalidateQueries({ queryKey: ["pockets"] });
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar bolsillo</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nombre</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>% Meta</Label>
+              <Input type="number" step="0.1" value={form.target_percentage} onChange={(e) => setForm({ ...form, target_percentage: Number(e.target.value) })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-md border border-border p-3">
+            <div>
+              <Label>Ahorro bloqueado</Label>
+              <p className="text-xs text-muted-foreground">Marca este bolsillo como reserva.</p>
+            </div>
+            <Switch checked={form.is_locked_savings} onCheckedChange={(v) => setForm({ ...form, is_locked_savings: v })} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => save.mutate()} disabled={!form.name || save.isPending}>
+            Actualizar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

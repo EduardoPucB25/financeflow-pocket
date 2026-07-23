@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { money } from "@/lib/format";
 import { graceInfo } from "@/lib/finance";
-import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Plus, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +24,15 @@ export const Route = createFileRoute("/_authenticated/cards")({
   loader: ({ context }) => context.queryClient.ensureQueryData(cardsQuery()),
   component: CardsPage,
 });
+
+type CardRow = {
+  id: string;
+  card_name: string;
+  credit_limit: number;
+  current_balance: number;
+  cutoff_day: number;
+  due_day: number;
+};
 
 function CardsPage() {
   const { data: cards } = useSuspenseQuery(cardsQuery());
@@ -51,7 +60,7 @@ function CardsPage() {
             Invisible Cash total: <span className="text-accent font-medium">{money(totalInvisible)}</span>
           </p>
         </div>
-        <NewCardDialog />
+        <CardDialog mode="create" />
       </div>
 
       {cards.length === 0 ? (
@@ -77,9 +86,12 @@ function CardsPage() {
                       Corte día {c.cutoff_day} · Pago día {c.due_day}
                     </div>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={() => del.mutate(c.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <CardDialog mode="edit" card={c as CardRow} />
+                    <Button size="icon" variant="ghost" onClick={() => del.mutate(c.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -114,20 +126,31 @@ function CardsPage() {
   );
 }
 
-function NewCardDialog() {
+function CardDialog({ mode, card }: { mode: "create" | "edit"; card?: CardRow }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ card_name: "", credit_limit: 0, current_balance: 0, cutoff_day: 27, due_day: 7 });
+  const [form, setForm] = useState({
+    card_name: card?.card_name ?? "",
+    credit_limit: Number(card?.credit_limit ?? 0),
+    current_balance: Number(card?.current_balance ?? 0),
+    cutoff_day: card?.cutoff_day ?? 27,
+    due_day: card?.due_day ?? 7,
+  });
 
-  const create = useMutation({
+  const save = useMutation({
     mutationFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("No auth");
-      const { error } = await supabase.from("credit_cards").insert({ user_id: user.user.id, ...form });
-      if (error) throw error;
+      if (mode === "edit" && card) {
+        const { error } = await supabase.from("credit_cards").update(form).eq("id", card.id);
+        if (error) throw error;
+      } else {
+        const { data: user } = await supabase.auth.getUser();
+        if (!user.user) throw new Error("No auth");
+        const { error } = await supabase.from("credit_cards").insert({ user_id: user.user.id, ...form });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Tarjeta agregada");
+      toast.success(mode === "edit" ? "Tarjeta actualizada" : "Tarjeta agregada");
       qc.invalidateQueries({ queryKey: ["credit_cards"] });
       setOpen(false);
     },
@@ -137,13 +160,15 @@ function NewCardDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-1" /> Nueva tarjeta
-        </Button>
+        {mode === "edit" ? (
+          <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
+        ) : (
+          <Button><Plus className="h-4 w-4 mr-1" /> Nueva tarjeta</Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva tarjeta</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Editar tarjeta" : "Nueva tarjeta"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -170,8 +195,8 @@ function NewCardDialog() {
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => create.mutate()} disabled={!form.card_name || create.isPending}>
-            Guardar
+          <Button onClick={() => save.mutate()} disabled={!form.card_name || save.isPending}>
+            {mode === "edit" ? "Actualizar" : "Guardar"}
           </Button>
         </DialogFooter>
       </DialogContent>

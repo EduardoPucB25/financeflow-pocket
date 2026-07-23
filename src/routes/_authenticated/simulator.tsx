@@ -120,6 +120,7 @@ function SimulatorPage() {
               <Select value={form.deposit_freq} onValueChange={(v) => setForm({ ...form, deposit_freq: v as Frequency })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
                   <SelectItem value="weekly">Semanal</SelectItem>
                   <SelectItem value="biweekly">Quincenal</SelectItem>
                   <SelectItem value="monthly">Mensual</SelectItem>
@@ -136,6 +137,7 @@ function SimulatorPage() {
               <Select value={form.withdrawal_freq} onValueChange={(v) => setForm({ ...form, withdrawal_freq: v as Frequency })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
                   <SelectItem value="weekly">Semanal</SelectItem>
                   <SelectItem value="biweekly">Quincenal</SelectItem>
                   <SelectItem value="monthly">Mensual</SelectItem>
@@ -197,9 +199,23 @@ function SimulatorPage() {
                     {money(s.initial_balance)} @ {s.annual_rate}% · {s.horizon_months}m
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => del.mutate(s.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => setForm({
+                    title: s.title,
+                    initial_balance: Number(s.initial_balance),
+                    annual_rate: Number(s.annual_rate),
+                    deposit_amount: Number(s.deposit_amount),
+                    deposit_freq: s.deposit_freq as Frequency,
+                    withdrawal_amount: Number(s.withdrawal_amount),
+                    withdrawal_freq: s.withdrawal_freq as Frequency,
+                    horizon_months: s.horizon_months,
+                  })}>
+                    Cargar
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => del.mutate(s.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
