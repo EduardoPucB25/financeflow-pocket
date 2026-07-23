@@ -131,10 +131,10 @@ export async function seedDefaultPockets(userId: string) {
   if (error) throw error;
   if (existing && existing.length > 0) return;
   const defaults = [
-    { name: "Growth 25%", target_percentage: 25, color: "#10B981", sort_order: 1 },
-    { name: "Valores 20%", target_percentage: 20, color: "#8B5CF6", sort_order: 2 },
+    { name: "Growth 25%", target_percentage: 25, color: "#10B981", sort_order: 1, is_locked_savings: false },
+    { name: "Valores 20%", target_percentage: 20, color: "#8B5CF6", sort_order: 2, is_locked_savings: false },
     { name: "Stability 15%", target_percentage: 15, color: "#F59E0B", sort_order: 3, is_locked_savings: true },
-    { name: "Essential 40%", target_percentage: 40, color: "#0EA5E9", sort_order: 4 },
+    { name: "Essential 40%", target_percentage: 40, color: "#0EA5E9", sort_order: 4, is_locked_savings: false },
   ];
   await supabase.from("pockets").insert(defaults.map((d) => ({ ...d, user_id: userId })));
 }

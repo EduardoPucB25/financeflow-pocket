@@ -10,6 +10,7 @@ export function usePaddleCheckout() {
     customerEmail?: string;
     customData?: Record<string, string>;
     successUrl?: string;
+    discountCode?: string;
   }) => {
     setLoading(true);
     try {
@@ -20,7 +21,7 @@ export function usePaddleCheckout() {
         throw new Error("Paddle is not available");
       }
 
-      window.Paddle.Checkout.open({
+      const checkoutConfig: Record<string, unknown> = {
         items: [{ priceId: paddlePriceId, quantity: options.quantity ?? 1 }],
         customer: options.customerEmail ? { email: options.customerEmail } : undefined,
         customData: options.customData,
@@ -30,7 +31,13 @@ export function usePaddleCheckout() {
           allowLogout: false,
           variant: "one-page",
         },
-      });
+      };
+
+      if (options.discountCode) {
+        checkoutConfig.discountCode = options.discountCode;
+      }
+
+      window.Paddle.Checkout.open(checkoutConfig);
     } finally {
       setLoading(false);
     }
@@ -38,3 +45,4 @@ export function usePaddleCheckout() {
 
   return { openCheckout, loading, environment: getPaddleEnvironment() };
 }
+
