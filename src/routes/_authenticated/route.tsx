@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { seedDefaultPockets } from "@/lib/queries";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { seedDefaultPockets, detectedTransactionsQuery } from "@/lib/queries";
+import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import {
   LayoutDashboard,
   Wallet,
@@ -13,6 +14,7 @@ import {
   Settings,
   LogOut,
   Menu,
+  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,7 @@ const NAV = [
   { to: "/pockets", label: "Bolsillos", icon: Wallet },
   { to: "/debts", label: "Deudas", icon: CreditCard },
   { to: "/transactions", label: "Movimientos", icon: Receipt },
+  { to: "/inbox", label: "Bandeja", icon: Inbox },
   { to: "/flows", label: "Flujos", icon: Repeat },
   { to: "/simulator", label: "Simulador", icon: LineChart },
   { to: "/settings", label: "Ajustes", icon: Settings },
