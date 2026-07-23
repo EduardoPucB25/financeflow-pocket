@@ -17,7 +17,6 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPocketsRouteImport } from './routes/_authenticated/pockets'
 import { Route as AuthenticatedFlowsRouteImport } from './routes/_authenticated/flows'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedCardsRouteImport } from './routes/_authenticated/cards'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -58,16 +57,10 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedCardsRoute = AuthenticatedCardsRouteImport.update({
-  id: '/cards',
-  path: '/cards',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cards': typeof AuthenticatedCardsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/flows': typeof AuthenticatedFlowsRoute
   '/pockets': typeof AuthenticatedPocketsRoute
@@ -77,7 +70,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cards': typeof AuthenticatedCardsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/flows': typeof AuthenticatedFlowsRoute
   '/pockets': typeof AuthenticatedPocketsRoute
@@ -89,7 +81,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/cards': typeof AuthenticatedCardsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/flows': typeof AuthenticatedFlowsRoute
   '/_authenticated/pockets': typeof AuthenticatedPocketsRoute
@@ -101,7 +92,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/cards'
     | '/dashboard'
     | '/flows'
     | '/pockets'
@@ -111,7 +101,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/cards'
     | '/dashboard'
     | '/flows'
     | '/pockets'
@@ -122,7 +111,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/_authenticated/cards'
     | '/_authenticated/dashboard'
     | '/_authenticated/flows'
     | '/_authenticated/pockets'
@@ -194,18 +182,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/cards': {
-      id: '/_authenticated/cards'
-      path: '/cards'
-      fullPath: '/cards'
-      preLoaderRoute: typeof AuthenticatedCardsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedCardsRoute: typeof AuthenticatedCardsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFlowsRoute: typeof AuthenticatedFlowsRoute
   AuthenticatedPocketsRoute: typeof AuthenticatedPocketsRoute
@@ -214,7 +194,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedCardsRoute: AuthenticatedCardsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFlowsRoute: AuthenticatedFlowsRoute,
   AuthenticatedPocketsRoute: AuthenticatedPocketsRoute,

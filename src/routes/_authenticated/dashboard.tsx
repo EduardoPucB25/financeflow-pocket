@@ -1,25 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { profileQuery, pocketsQuery, cardsQuery, flowsQuery } from "@/lib/queries";
+import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery } from "@/lib/queries";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { money, pct } from "@/lib/format";
 import { compoundDaily, graceInfo, daysUntilPayday } from "@/lib/finance";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, CreditCard, Wallet, Calendar } from "lucide-react";
+import { TrendingUp, CreditCard, Wallet, Calendar, Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Panel — FinFlow" },
-      { name: "description", content: "Vista general de tus finanzas: bolsillos, tarjetas y rendimiento." },
+      { name: "description", content: "Vista general de tus finanzas: bolsillos, deudas, transacciones y rendimiento." },
     ],
   }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(profileQuery());
     context.queryClient.ensureQueryData(pocketsQuery());
-    context.queryClient.ensureQueryData(cardsQuery());
+    context.queryClient.ensureQueryData(debtsQuery());
     context.queryClient.ensureQueryData(flowsQuery());
+    context.queryClient.ensureQueryData(transactionsQuery());
   },
   component: Dashboard,
 });
@@ -27,15 +28,22 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { data: profile } = useSuspenseQuery(profileQuery());
   const { data: pockets } = useSuspenseQuery(pocketsQuery());
-  const { data: cards } = useSuspenseQuery(cardsQuery());
+  const { data: debts } = useSuspenseQuery(debtsQuery());
   const { data: flows } = useSuspenseQuery(flowsQuery());
+  const { data: transactions } = useSuspenseQuery(transactionsQuery());
 
   const totalBalance = pockets.reduce((s, p) => s + Number(p.current_balance), 0);
   const totalPct = pockets.reduce((s, p) => s + Number(p.target_percentage), 0);
   const annualRate = Number(profile?.annual_yield_rate ?? 15);
-  const invisibleCash = cards.reduce((s, c) => s + (Number(c.credit_limit) - Number(c.current_balance)), 0);
+  const cards = debts.filter((d) => d.debt_type === "card");
+  const totalDebt = debts.reduce((s, d) => s + Number(d.current_balance), 0);
+  const invisibleCash = cards.reduce(
+    (s, c) => s + (Number(c.credit_limit ?? 0) - Number(c.current_balance)),
+    0,
+  );
   const salary = Number(profile?.biweekly_salary ?? 0);
   const paydayIn = daysUntilPayday([15, 30]);
+  const recentTx = transactions.slice(0, 5);
 
   const projectionData = [30, 60, 90, 180, 365].map((d) => ({
     day: `${d}d`,
