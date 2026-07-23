@@ -11,8 +11,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Ingresar — FinFlow" },
-      { name: "description", content: "Inicia sesión o crea tu cuenta en FinFlow." },
+      { title: "Ingresar — Finance Flow Pocket" },
+      { name: "description", content: "Inicia sesión o crea tu cuenta en Finance Flow Pocket." },
     ],
   }),
   component: AuthPage,
@@ -59,19 +59,20 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <CosmicBackground />
       <div className="p-6">
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
           ← Volver
         </Link>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 pb-16">
-        <Card className="w-full max-w-md p-6">
+        <Card className="w-full max-w-md p-6 backdrop-blur-md bg-card/70 border-border/60">
           <div className="mb-6 text-center">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
               F
             </div>
-            <h1 className="mt-4 text-2xl font-semibold">FinFlow Copilot</h1>
+            <h1 className="mt-4 text-2xl font-semibold">Finance Flow Pocket</h1>
             <p className="text-sm text-muted-foreground">Tu motor financiero personal</p>
           </div>
           <Tabs defaultValue="signin">
