@@ -200,7 +200,7 @@ function DebtsPage() {
   );
 }
 
-function DebtDialog({ mode, debt }: { mode: "create" | "edit"; debt?: DebtRow }) {
+function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: DebtRow; disabled?: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -257,7 +257,7 @@ function DebtDialog({ mode, debt }: { mode: "create" | "edit"; debt?: DebtRow })
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button><Plus className="h-4 w-4 mr-1" /> Nueva deuda</Button>
+          <Button disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nueva deuda</Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
