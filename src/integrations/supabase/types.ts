@@ -98,6 +98,68 @@ export type Database = {
         }
         Relationships: []
       }
+      detected_transactions: {
+        Row: {
+          amount: number | null
+          approved_transaction_id: string | null
+          created_at: string
+          currency: string
+          dedupe_key: string | null
+          detected_at: string
+          id: string
+          merchant: string | null
+          notification_title: string | null
+          package_name: string
+          raw_text: string
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          approved_transaction_id?: string | null
+          created_at?: string
+          currency?: string
+          dedupe_key?: string | null
+          detected_at?: string
+          id?: string
+          merchant?: string | null
+          notification_title?: string | null
+          package_name: string
+          raw_text: string
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          approved_transaction_id?: string | null
+          created_at?: string
+          currency?: string
+          dedupe_key?: string | null
+          detected_at?: string
+          id?: string
+          merchant?: string | null
+          notification_title?: string | null
+          package_name?: string
+          raw_text?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detected_transactions_approved_transaction_id_fkey"
+            columns: ["approved_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pockets: {
         Row: {
           color: string
