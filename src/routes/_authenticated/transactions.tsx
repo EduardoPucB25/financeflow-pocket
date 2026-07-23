@@ -18,7 +18,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
-      { title: "Transacciones — FinFlow" },
+      { title: "Transacciones — Finance Flow Pocket" },
       { name: "description", content: "Registra manualmente cobros, pagos, transferencias e ingresos con contrapartes." },
     ],
   }),

@@ -11,7 +11,7 @@ import { TrendingUp, CreditCard, Wallet, Calendar, Receipt } from "lucide-react"
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Panel — FinFlow" },
+      { title: "Panel — Finance Flow Pocket" },
       { name: "description", content: "Vista general de tus finanzas: bolsillos, deudas, transacciones y rendimiento." },
     ],
   }),

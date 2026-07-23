@@ -81,20 +81,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FinFlowPoket" },
+      { title: "Finance Flow Pocket" },
       {
         name: "description",
         content:
           "Maximiza rendimientos diarios, optimiza el periodo de gracia de tus tarjetas y distribuye tu dinero con inteligencia.",
       },
-      { property: "og:title", content: "FinFlowPoket" },
+      { property: "og:title", content: "Finance Flow Pocket" },
       {
         property: "og:description",
         content: "Maximiza rendimientos diarios, optimiza el periodo de gracia de tus tarjetas y distribuye tu dinero con inteligencia.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "FinFlowPoket" },
+      { name: "twitter:title", content: "Finance Flow Pocket" },
       { name: "twitter:description", content: "Maximiza rendimientos diarios, optimiza el periodo de gracia de tus tarjetas y distribuye tu dinero con inteligencia." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d9306818-6c19-4502-9c06-db5960b071a2" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d9306818-6c19-4502-9c06-db5960b071a2" },

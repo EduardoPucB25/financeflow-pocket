@@ -18,13 +18,14 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground relative">
+      <CosmicBackground />
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2 font-semibold">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
             F
           </span>
-          FinFlow
+          Finance Flow Pocket
         </div>
         <Link
           to="/auth"
