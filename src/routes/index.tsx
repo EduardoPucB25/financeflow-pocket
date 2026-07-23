@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TrendingUp, CreditCard, Wallet, Sparkles } from "lucide-react";
+import { CosmicBackground } from "@/components/CosmicBackground";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FinFlowPoket" },
+      { title: "Finance Flow Pocket" },
       {
         name: "description",
         content:
