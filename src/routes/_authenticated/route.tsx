@@ -47,6 +47,16 @@ function AuthedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Activates the Android notification-listener bridge on native builds.
+  // On web this is a safe no-op.
+  useNotificationCapture(user.id);
+
+  const pendingDetected = useQuery({
+    ...detectedTransactionsQuery(),
+    select: (rows) => rows.filter((r) => r.status === "pending").length,
+  });
+  const pendingCount = pendingDetected.data ?? 0;
+
   useEffect(() => {
     seedDefaultPockets(user.id).catch(console.error);
   }, [user.id]);
