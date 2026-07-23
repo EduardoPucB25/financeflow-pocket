@@ -101,6 +101,103 @@ function SettingsPage() {
           Guardar cambios
         </Button>
       </Card>
+
+      <AndroidDetectionCard />
     </div>
+  );
+}
+
+function AndroidDetectionCard() {
+  const {
+    supported,
+    permissionGranted,
+    watchedPackages,
+    requestPermission,
+    refreshPermission,
+    setWatchedPackages,
+  } = useNotificationCapture(null);
+  const [draft, setDraft] = useState(watchedPackages.join("\n"));
+
+  useEffect(() => {
+    setDraft(watchedPackages.join("\n"));
+  }, [watchedPackages]);
+
+  return (
+    <Card className="p-6 space-y-4 bg-card/70 backdrop-blur">
+      <div className="flex items-center gap-2">
+        <Smartphone className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Detección automática (Android)</h2>
+      </div>
+
+      {!supported ? (
+        <p className="text-sm text-muted-foreground">
+          Esta sección solo está activa en la app Android instalada como APK. En el navegador
+          no es posible leer notificaciones del sistema. Consulta{" "}
+          <code className="text-xs">docs/android-build.md</code> para generar el APK.
+        </p>
+      ) : (
+        <>
+          <div
+            className={
+              "flex items-start gap-3 rounded-md border p-3 text-sm " +
+              (permissionGranted
+                ? "border-emerald-500/40 bg-emerald-500/10"
+                : "border-amber-500/40 bg-amber-500/10")
+            }
+          >
+            {permissionGranted ? (
+              <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0" />
+            ) : (
+              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+            )}
+            <div className="flex-1">
+              <div className="font-medium">
+                {permissionGranted
+                  ? "Acceso a notificaciones activado"
+                  : "Permiso pendiente"}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {permissionGranted
+                  ? "La app está leyendo las notificaciones de las apps vigiladas."
+                  : "Otorga acceso para que la app pueda leer notificaciones bancarias."}
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={requestPermission}>
+              {permissionGranted ? "Ajustar" : "Otorgar"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={refreshPermission}>
+              Refrescar
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Apps vigiladas (una por línea)</Label>
+            <Textarea
+              rows={6}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Usa el nombre de paquete (ej. <code>com.bbva.bbvacontigo</code>). Solo se capturan
+              notificaciones de estas apps.
+            </p>
+            <Button
+              size="sm"
+              onClick={async () => {
+                const list = draft
+                  .split(/\r?\n/)
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                await setWatchedPackages(list);
+                toast.success("Lista actualizada");
+              }}
+            >
+              Guardar apps
+            </Button>
+          </div>
+        </>
+      )}
+    </Card>
   );
 }
