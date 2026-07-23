@@ -56,6 +56,9 @@ const TYPE_META: Record<string, { label: string; icon: typeof CreditCard }> = {
 
 function DebtsPage() {
   const { data: debts } = useSuspenseQuery(debtsQuery());
+  const { data: profile } = useQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const { isPro } = deriveSubStatus(subscription);
   const qc = useQueryClient();
 
   const del = useMutation({
@@ -66,11 +69,15 @@ function DebtsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["debts"] }),
   });
 
-  const totalDebt = debts.reduce((s, d) => s + Number(d.current_balance), 0);
-  const totalMinimum = debts.reduce((s, d) => s + Number(d.minimum_payment), 0);
-  const totalInvisible = debts
-    .filter((d) => d.debt_type === "card")
-    .reduce((s, c) => s + (Number(c.credit_limit ?? 0) - Number(c.current_balance)), 0);
+  const { visible: visibleDebts, hiddenCount } = limitForFree(debts, isPro, FREE_LIMITS.debts);
+  const totalDebt = visibleDebts.reduce((s, d) => s + Number(d.current_balance), 0);
+  const totalMinimum = visibleDebts.reduce((s, d) => s + Number(d.minimum_payment), 0);
+  const totalInvisible = isPro
+    ? visibleDebts
+        .filter((d) => d.debt_type === "card")
+        .reduce((s, c) => s + (Number(c.credit_limit ?? 0) - Number(c.current_balance)), 0)
+    : 0;
+  const atFreeLimit = !isPro && debts.length >= FREE_LIMITS.debts;
 
   return (
     <div className="p-4 md:p-8 space-y-6">
