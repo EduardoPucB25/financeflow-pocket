@@ -78,14 +78,62 @@ async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
 }
 
 async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
+  const { id, currentBillingPeriod } = data;
+  const periodEnd = currentBillingPeriod?.endsAt ? new Date(currentBillingPeriod.endsAt) : null;
+  const stillInGracePeriod = periodEnd && periodEnd > new Date();
+
   await getSupabase()
     .from("subscriptions")
     .update({
       status: "canceled",
+      current_period_end: currentBillingPeriod?.endsAt,
       updated_at: new Date().toISOString(),
     })
-    .eq("paddle_subscription_id", data.id)
+    .eq("paddle_subscription_id", id)
     .eq("environment", env);
+
+  // Only reset profiles.plan when the paid access window has actually ended.
+  if (!stillInGracePeriod) {
+    const { data: row } = await getSupabase()
+      .from("subscriptions")
+      .select("user_id")
+      .eq("paddle_subscription_id", id)
+      .maybeSingle();
+    if (row?.user_id) {
+      await getSupabase().from("profiles").update({ plan: "free" }).eq("id", row.user_id);
+    }
+  }
+}
+
+async function handleTransactionEvent(
+  eventType: string,
+  data: any,
+  env: PaddleEnv,
+) {
+  const userId = data.customData?.userId;
+  if (!userId) return;
+
+  const item = data.items?.[0];
+  const total = data.details?.totals?.total ?? null;
+  const currency = data.currencyCode ?? null;
+
+  await getSupabase()
+    .from("billing_events")
+    .upsert(
+      {
+        user_id: userId,
+        paddle_transaction_id: data.id,
+        paddle_subscription_id: data.subscriptionId ?? null,
+        event_type: eventType,
+        status: data.status,
+        amount_total: total ? String(total) : null,
+        currency_code: currency,
+        invoice_url: data.invoiceUrl ?? null,
+        environment: env,
+        billed_at: data.billedAt ?? item?.billingPeriod?.endsAt ?? null,
+      },
+      { onConflict: "paddle_transaction_id,event_type" },
+    );
 }
 
 async function handleWebhook(req: Request, env: PaddleEnv) {
@@ -100,6 +148,12 @@ async function handleWebhook(req: Request, env: PaddleEnv) {
       break;
     case EventName.SubscriptionCanceled:
       await handleSubscriptionCanceled(event.data, env);
+      break;
+    case EventName.TransactionCompleted:
+      await handleTransactionEvent("completed", event.data, env);
+      break;
+    case EventName.TransactionPaymentFailed:
+      await handleTransactionEvent("payment_failed", event.data, env);
       break;
     default:
       console.log("Unhandled event:", event.eventType);
@@ -123,3 +177,4 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
     },
   },
 });
+

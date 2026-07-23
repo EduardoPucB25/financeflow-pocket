@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { profileQuery, subscriptionQuery } from "@/lib/queries";
+import { useServerFn } from "@tanstack/react-start";
+import { profileQuery, subscriptionQuery, billingEventsQuery } from "@/lib/queries";
 import { deriveSubStatus } from "@/lib/subscription";
+import { getPaddleEnvironment } from "@/lib/paddle";
+import { createCustomerPortalSession } from "@/utils/billing.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
-import { Smartphone, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
+import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -103,10 +106,141 @@ function SettingsPage() {
         </Button>
       </Card>
 
+      <SubscriptionCard />
+      <BillingHistoryCard />
       <AndroidDetectionCard />
     </div>
   );
 }
+
+function SubscriptionCard() {
+  const { data: profile } = useQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const { isPro, isCanceling, isPastDue } = deriveSubStatus(subscription);
+  const openPortal = useServerFn(createCustomerPortalSession);
+  const [loading, setLoading] = useState(false);
+
+  const handleManage = async () => {
+    setLoading(true);
+    try {
+      const env = getPaddleEnvironment();
+      const result = await openPortal({ data: { environment: env } });
+      const url = result.overviewUrl;
+      if (!url) throw new Error("No se pudo generar el portal");
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al abrir el portal");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <Crown className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Suscripción</h2>
+      </div>
+
+      {!subscription ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Actualmente estás en el plan Gratis.
+          </p>
+          <Button asChild size="sm">
+            <Link to="/upgrade">Ver planes Pro</Link>
+          </Button>
+        </>
+      ) : (
+        <>
+          <div className="text-sm space-y-1">
+            <div>
+              <span className="text-muted-foreground">Plan:</span>{" "}
+              <strong>{subscription.price_id ?? "—"}</strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Estado:</span>{" "}
+              <strong>
+                {isPastDue
+                  ? "Pago pendiente"
+                  : isCanceling
+                    ? "Cancelada (acceso hasta fin de periodo)"
+                    : isPro
+                      ? "Activa"
+                      : (subscription.status ?? "—")}
+              </strong>
+            </div>
+            {subscription.current_period_end && (
+              <div>
+                <span className="text-muted-foreground">
+                  {isCanceling ? "Acceso hasta:" : "Próxima renovación:"}
+                </span>{" "}
+                <strong>
+                  {new Date(subscription.current_period_end).toLocaleDateString("es-MX")}
+                </strong>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Gestiona tu método de pago, descarga facturas o cancela desde el portal seguro de pagos.
+          </p>
+          <Button size="sm" onClick={handleManage} disabled={loading}>
+            {loading ? "Abriendo…" : "Gestionar suscripción"}
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function BillingHistoryCard() {
+  const { data: profile } = useQuery(profileQuery());
+  const { data: events } = useQuery(billingEventsQuery(profile?.id));
+
+  if (!events || events.length === 0) return null;
+
+  return (
+    <Card className="p-6 space-y-3">
+      <h2 className="text-lg font-semibold">Historial de facturación</h2>
+      <ul className="text-sm divide-y divide-border">
+        {events.map((e) => {
+          const amount = e.amount_total ? Number(e.amount_total) / 100 : null;
+          const failed = e.event_type === "payment_failed" || e.status === "payment_failed";
+          return (
+            <li key={e.id} className="py-2 flex items-center justify-between gap-3">
+              <div>
+                <div className={failed ? "text-destructive font-medium" : "font-medium"}>
+                  {failed ? "Pago fallido" : "Pago cobrado"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {new Date(e.billed_at ?? e.created_at ?? "").toLocaleString("es-MX")}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono">
+                  {amount !== null
+                    ? `${amount.toFixed(2)} ${e.currency_code ?? ""}`
+                    : "—"}
+                </div>
+                {e.invoice_url && (
+                  <a
+                    href={e.invoice_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary underline"
+                  >
+                    Factura
+                  </a>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
 
 function AndroidDetectionCard() {
   const { data: profile } = useQuery(profileQuery());

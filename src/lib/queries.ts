@@ -45,6 +45,24 @@ export const subscriptionQuery = (userId: string | undefined) =>
     enabled: !!userId,
   });
 
+export const billingEventsQuery = (userId: string | undefined) =>
+  queryOptions({
+    queryKey: ["billing_events", userId, getPaddleEnvironment()],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase
+        .from("billing_events")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("environment", getPaddleEnvironment())
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!userId,
+  });
+
 export const pocketsQuery = () =>
   queryOptions({
     queryKey: ["pockets"],

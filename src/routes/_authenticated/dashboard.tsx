@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus } from "@/lib/subscription";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -33,14 +34,7 @@ function Dashboard() {
   const { data: flows } = useSuspenseQuery(flowsQuery());
   const { data: transactions } = useSuspenseQuery(transactionsQuery());
   const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
-  const isPro = Boolean(
-    subscription &&
-      (subscription.status === "active" ||
-        subscription.status === "trialing" ||
-        (subscription.status === "canceled" &&
-          subscription.current_period_end &&
-          new Date(subscription.current_period_end) > new Date())),
-  );
+  const { isPro } = deriveSubStatus(subscription);
 
   const totalBalance = pockets.reduce((s, p) => s + Number(p.current_balance), 0);
   const totalPct = pockets.reduce((s, p) => s + Number(p.target_percentage), 0);
