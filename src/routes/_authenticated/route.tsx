@@ -61,7 +61,7 @@ function AuthedLayout() {
       <aside className="hidden md:flex md:w-60 md:flex-col border-r border-border bg-sidebar text-sidebar-foreground">
         <div className="p-4 border-b border-sidebar-border flex items-center gap-2 font-semibold">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">F</span>
-          FinFlow
+          Finance Flow Pocket
         </div>
         <nav className="flex-1 p-2 space-y-1">
           {NAV.map((n) => {
@@ -95,7 +95,7 @@ function AuthedLayout() {
       <header className="md:hidden flex items-center justify-between px-4 h-14 border-b border-border">
         <div className="flex items-center gap-2 font-semibold">
           <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground text-sm">F</span>
-          FinFlow
+          Finance Flow Pocket
         </div>
         <Button variant="ghost" size="sm" onClick={() => setMobileOpen((v) => !v)}>
           <Menu className="h-5 w-5" />
