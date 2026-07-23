@@ -1,6 +1,6 @@
 // Financial utility calculations.
 
-export type Frequency = "weekly" | "biweekly" | "monthly" | "one_time";
+export type Frequency = "daily" | "weekly" | "biweekly" | "monthly" | "one_time";
 
 /** Convert an APY (as percent, e.g. 15 = 15%) to a daily compounding rate. */
 export function dailyRate(annualPct: number): number {
@@ -59,6 +59,8 @@ export function simulateYield(params: {
 
 function frequencyDays(freq: Frequency): number | null {
   switch (freq) {
+    case "daily":
+      return 1;
     case "weekly":
       return 7;
     case "biweekly":
