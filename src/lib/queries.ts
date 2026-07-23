@@ -25,14 +25,14 @@ export const pocketsQuery = () =>
     },
   });
 
-export const cardsQuery = () =>
+export const debtsQuery = () =>
   queryOptions({
-    queryKey: ["credit_cards"],
+    queryKey: ["debts"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("credit_cards")
+        .from("debts")
         .select("*")
-        .order("card_name");
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -59,6 +59,33 @@ export const simulationsQuery = () =>
         .from("yield_simulations")
         .select("*")
         .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+export const counterpartiesQuery = () =>
+  queryOptions({
+    queryKey: ["counterparties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+export const transactionsQuery = () =>
+  queryOptions({
+    queryKey: ["transactions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .order("occurred_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return data ?? [];
     },
