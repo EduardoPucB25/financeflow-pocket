@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } fr
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { seedDefaultPockets, detectedTransactionsQuery } from "@/lib/queries";
+import { seedDefaultPockets, detectedTransactionsQuery, subscriptionQuery } from "@/lib/queries";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import logoAsset from "@/assets/logo.svg.asset.json";
 import {
@@ -16,8 +16,10 @@ import {
   LogOut,
   Menu,
   Inbox,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -38,6 +40,7 @@ const NAV = [
   { to: "/inbox", label: "Bandeja", icon: Inbox },
   { to: "/flows", label: "Flujos", icon: Repeat },
   { to: "/simulator", label: "Simulador", icon: LineChart },
+  { to: "/upgrade", label: "Upgrade", icon: Crown },
   { to: "/settings", label: "Ajustes", icon: Settings },
 ] as const;
 
@@ -57,6 +60,16 @@ function AuthedLayout() {
     select: (rows) => rows.filter((r) => r.status === "pending").length,
   });
   const pendingCount = pendingDetected.data ?? 0;
+
+  const { data: subscription } = useQuery(subscriptionQuery(user.id));
+  const isPro = Boolean(
+    subscription &&
+      (subscription.status === "active" ||
+        subscription.status === "trialing" ||
+        (subscription.status === "canceled" &&
+          subscription.current_period_end &&
+          new Date(subscription.current_period_end) > new Date())),
+  );
 
   useEffect(() => {
     seedDefaultPockets(user.id).catch(console.error);
@@ -103,7 +116,14 @@ function AuthedLayout() {
           })}
         </nav>
         <div className="p-3 border-t border-sidebar-border">
-          <div className="text-xs text-muted-foreground truncate mb-2">{user.email}</div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+            {isPro && (
+              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-auto bg-primary/20 text-primary border-primary/30">
+                Pro
+              </Badge>
+            )}
+          </div>
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
             <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión
           </Button>
@@ -149,7 +169,14 @@ function AuthedLayout() {
             })}
           </nav>
           <div className="p-2 border-t border-border flex items-center justify-between">
-            <span className="text-xs text-muted-foreground truncate pr-2">{user.email}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+              {isPro && (
+                <Badge variant="default" className="text-[10px] px-1.5 py-0 h-auto bg-primary/20 text-primary border-primary/30">
+                  Pro
+                </Badge>
+              )}
+            </div>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-1" /> Salir
             </Button>

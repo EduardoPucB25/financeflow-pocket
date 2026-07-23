@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery } from "@/lib/queries";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery, subscriptionQuery } from "@/lib/queries";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { money, pct } from "@/lib/format";
 import { compoundDaily, graceInfo, daysUntilPayday } from "@/lib/finance";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, CreditCard, Wallet, Calendar, Receipt } from "lucide-react";
+import { TrendingUp, CreditCard, Wallet, Calendar, Receipt, Crown, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -31,6 +32,15 @@ function Dashboard() {
   const { data: debts } = useSuspenseQuery(debtsQuery());
   const { data: flows } = useSuspenseQuery(flowsQuery());
   const { data: transactions } = useSuspenseQuery(transactionsQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const isPro = Boolean(
+    subscription &&
+      (subscription.status === "active" ||
+        subscription.status === "trialing" ||
+        (subscription.status === "canceled" &&
+          subscription.current_period_end &&
+          new Date(subscription.current_period_end) > new Date())),
+  );
 
   const totalBalance = pockets.reduce((s, p) => s + Number(p.current_balance), 0);
   const totalPct = pockets.reduce((s, p) => s + Number(p.target_percentage), 0);
@@ -68,6 +78,27 @@ function Dashboard() {
         <StatCard icon={CreditCard} label="Invisible Cash disponible" value={money(invisibleCash)} accent="text-accent" />
         <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={money(salary)} accent="text-warning" />
       </div>
+
+      {!isPro && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-1 rounded-full bg-primary/20 p-2 text-primary">
+              <Crown className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-semibold">Desbloquea funciones Pro</p>
+              <p className="text-sm text-muted-foreground">
+                Bolsillos ilimitados, detección automática de notificaciones bancarias y simulador avanzado.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/upgrade">
+              <Zap className="h-4 w-4 mr-1" /> Ver planes Pro
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Allocation */}

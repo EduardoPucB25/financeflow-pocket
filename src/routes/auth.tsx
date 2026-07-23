@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { CosmicBackground } from "@/components/CosmicBackground";
+import logoAsset from "@/assets/logo.svg.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -70,9 +71,11 @@ function AuthPage() {
       <div className="flex-1 flex items-center justify-center px-4 pb-16">
         <Card className="w-full max-w-md p-6 backdrop-blur-md bg-card/70 border-border/60">
           <div className="mb-6 text-center">
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
-              F
-            </div>
+            <img
+              src={logoAsset.url}
+              alt="Finance Flow Pocket"
+              className="mx-auto h-12 w-12 rounded-xl"
+            />
             <h1 className="mt-4 text-2xl font-semibold">Finance Flow Pocket</h1>
             <p className="text-sm text-muted-foreground">Tu motor financiero personal</p>
           </div>
