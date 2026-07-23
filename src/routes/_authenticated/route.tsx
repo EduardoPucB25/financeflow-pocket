@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { seedDefaultPockets, detectedTransactionsQuery } from "@/lib/queries";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
+import logoAsset from "@/assets/logo.svg.asset.json";
 import {
   LayoutDashboard,
   Wallet,
@@ -73,7 +74,7 @@ function AuthedLayout() {
       {/* Sidebar (desktop) */}
       <aside className="hidden md:flex md:w-60 md:flex-col border-r border-border bg-sidebar text-sidebar-foreground">
         <div className="p-4 border-b border-sidebar-border flex items-center gap-2 font-semibold">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">F</span>
+          <img src={logoAsset.url} alt="Finance Flow Pocket" className="h-8 w-8 rounded-lg" />
           Finance Flow Pocket
         </div>
         <nav className="flex-1 p-2 space-y-1">
@@ -112,7 +113,7 @@ function AuthedLayout() {
       {/* Mobile top bar */}
       <header className="md:hidden flex items-center justify-between px-4 h-14 border-b border-border">
         <div className="flex items-center gap-2 font-semibold">
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground text-sm">F</span>
+          <img src={logoAsset.url} alt="Finance Flow Pocket" className="h-7 w-7 rounded-md" />
           Finance Flow Pocket
         </div>
         <Button variant="ghost" size="sm" onClick={() => setMobileOpen((v) => !v)}>
