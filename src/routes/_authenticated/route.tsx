@@ -135,7 +135,14 @@ function AuthedLayout() {
                   )}
                 >
                   <n.icon className="h-4 w-4" />
-                  {n.label}
+                  <span className="relative">
+                    {n.label}
+                    {n.to === "/inbox" && pendingCount > 0 && (
+                      <span className="absolute -top-1 -right-3 text-[9px] font-semibold px-1 rounded-full bg-primary text-primary-foreground">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               );
             })}
