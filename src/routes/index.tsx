@@ -41,12 +41,17 @@ function Landing() {
           />
           Finance Flow Pocket
         </div>
-        <Link
-          to="/auth"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Entrar
-        </Link>
+        <nav className="flex items-center gap-4 text-sm">
+          <Link to="/pricing" className="text-muted-foreground hover:text-foreground">
+            Precios
+          </Link>
+          <Link
+            to="/auth"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Entrar
+          </Link>
+        </nav>
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pb-24 pt-12 md:pt-20">
