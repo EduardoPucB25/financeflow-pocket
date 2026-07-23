@@ -1,75 +1,130 @@
+# Plan: APK Android + Plugin de Lectura de Notificaciones
 
-# FinFlow Copilot — MVP Plan
+Objetivo: convertir Finance Flow Pocket en app descargable Android (APK) que lea notificaciones del sistema (solo bancos / pagos / transferencias), parsee monto + comercio + tipo, y las envíe a la web app como transacciones borrador para que el usuario confirme.
 
-Bilingual approach: user-facing text in **Spanish**, code/components in **English**. Email + password auth only. Dark financial theme.
+## Alcance
 
-## 1. Backend (Lovable Cloud / Supabase)
+Incluye:
+- Empaquetado Capacitor (Android). iOS queda fuera (iOS no permite leer notificaciones de otras apps).
+- Plugin nativo Kotlin usando `NotificationListenerService`.
+- Filtro por paquetes bancarios/pagos (BBVA, Santander, Banorte, Nu, Mercado Pago, etc. — lista configurable).
+- Parser de texto (regex) por banco para extraer: monto, moneda, comercio/persona, tipo (cargo/abono/transferencia), fecha.
+- Bandeja "Transacciones detectadas" en la web app → usuario confirma / edita / descarta → se inserta en `transactions`.
+- Build de APK debug firmado localmente para instalar por sideload.
 
-Enable Lovable Cloud, then one migration creating:
+Fuera de alcance (fases futuras):
+- Publicación en Play Store (requiere justificación especial para permiso `BIND_NOTIFICATION_LISTENER_SERVICE` + cuenta developer $25).
+- iOS.
+- OCR de SMS / lectura de correos.
+- Sincronización offline avanzada (usaremos la sesión Supabase existente + cola simple).
 
-- `profiles` — id (FK auth.users), full_name, biweekly_salary, salary_frequency, annual_yield_rate, timestamps. Auto-created via `handle_new_user` trigger on `auth.users`.
-- `pockets` — user's allocation buckets (Growth/Stability/Values/Essential + custom), with target_percentage, current_balance, is_locked_savings, color.
-- `credit_cards` — card_name, credit_limit, current_balance, cutoff_day, due_day, status. Includes computed grace-period info in UI.
-- `scheduled_flows` — recurring deposits/withdrawals tied to a pocket, with frequency + next_execution_date.
-- `yield_simulations` — saved compound-interest scenarios.
+## Arquitectura
 
-RLS: every table `user_id = auth.uid()` for select/insert/update/delete. GRANTs to `authenticated` + `service_role`. Roles table not needed for MVP (single-user scope).
+```text
+[Notificación banco] 
+      ↓
+NotificationListenerService (Kotlin, background)
+      ↓ filtra por packageName ∈ WATCHED_APPS
+BankNotificationParser (regex por banco → {amount, merchant, type, currency})
+      ↓
+Capacitor Plugin bridge → JS event "bankNotification"
+      ↓
+Web app (React) recibe → guarda en tabla detected_transactions (status=pending)
+      ↓
+UI "Bandeja de detección" → usuario aprueba → INSERT en transactions + delete pending
+```
 
-Seed on first login (client-side, idempotent): create the default 4 pockets (Growth 25%, Valores 20%, Stability 15%, Essential 40%) if none exist.
+## Fases
 
-## 2. Auth
+### Fase 1 — Capacitor base
+- `bun add @capacitor/core @capacitor/cli @capacitor/android`
+- `npx cap init "Finance Flow Pocket" com.financeflow.pocket --web-dir=dist`
+- Configurar `capacitor.config.ts` con `server.androidScheme=https` y (para dev) `server.url` apuntando al preview.
+- `npx cap add android` genera carpeta `android/`.
+- Ajustar `AndroidManifest.xml`: `INTERNET`, `POST_NOTIFICATIONS`, y el permiso especial `BIND_NOTIFICATION_LISTENER_SERVICE` en el `<service>`.
+- Script `build:android` que hace `vite build && cap sync android`.
 
-- `/auth` public route — email/password sign in + sign up (Spanish UI). Uses browser `supabase` client with `emailRedirectTo: window.location.origin`.
-- Managed `_authenticated/route.tsx` gates the app.
-- Header shows user email + "Cerrar sesión" with proper sign-out hygiene (cancel queries, clear cache, replace nav).
+### Fase 2 — Plugin nativo Kotlin
+Estructura en `android/app/src/main/java/com/financeflow/pocket/notifications/`:
+- `NotificationCaptureService.kt` — extiende `NotificationListenerService`. En `onNotificationPosted`:
+  - Verifica `sbn.packageName` contra allowlist.
+  - Extrae `extras.getString(Notification.EXTRA_TITLE / EXTRA_TEXT / EXTRA_BIG_TEXT)`.
+  - Llama a `BankParsers.parse(pkg, title, text)`.
+  - Si hay match → `NotificationBridge.emit(payload)`.
+- `BankParsers.kt` — mapa `packageName → List<Regex>` con parsers específicos. Estructura extensible.
+- `NotificationCapturePlugin.kt` — `@CapacitorPlugin(name="NotificationCapture")` expone:
+  - `isPermissionGranted()` — revisa `NotificationManagerCompat.getEnabledListenerPackages`.
+  - `openPermissionSettings()` — lanza `ACTION_NOTIFICATION_LISTENER_SETTINGS`.
+  - `setWatchedPackages({packages: string[]})` — guarda en SharedPreferences.
+  - Evento `bankNotification` con `{packageName, amount, currency, merchant, type, rawText, timestamp}`.
+- Registrar plugin en `MainActivity.kt`.
 
-## 3. Routes
+### Fase 3 — Puente TS + hook React
+- `src/lib/native/notificationCapture.ts` — wrapper tipado:
+  ```ts
+  registerPlugin<NotificationCapturePlugin>('NotificationCapture')
+  ```
+- `src/hooks/useNotificationCapture.ts`:
+  - Detecta plataforma nativa (`Capacitor.isNativePlatform()`).
+  - Suscribe a `bankNotification` → inserta en `detected_transactions`.
+  - Expone `permissionGranted`, `requestPermission()`, `watchedApps`.
 
-- `/` — public landing: brief pitch + "Entrar" CTA (redirects to `/auth` or `/dashboard` if signed in).
-- `/auth` — login/signup.
-- `/_authenticated/dashboard` — main overview (default post-login).
-- `/_authenticated/pockets` — CRUD for pockets, allocation ring chart, rebalance helper.
-- `/_authenticated/cards` — credit cards list with grace-period countdown + "Invisible Cash" available.
-- `/_authenticated/flows` — scheduled inflows/outflows calendar list.
-- `/_authenticated/simulator` — daily-compound yield simulator with Recharts line chart; save scenarios.
-- `/_authenticated/settings` — profile: salary, frequency, annual yield rate.
+### Fase 4 — Backend (tabla borrador)
+Migración nueva:
+- Tabla `detected_transactions`: `id, user_id, amount, currency, merchant, type, raw_text, package_name, detected_at, status ('pending'|'approved'|'rejected'), approved_transaction_id`.
+- RLS + GRANTs siguiendo convención del proyecto.
+- Índice por `user_id, status, detected_at desc`.
 
-Each route defines its own `head()` (Spanish titles/descriptions).
+### Fase 5 — UI de aprobación
+- Ruta nueva `src/routes/_authenticated/inbox.tsx` "Bandeja de detección":
+  - Lista de pendientes con monto, comercio parseado, texto crudo colapsable.
+  - Botones: Aprobar (abre dialog con pocket/categoría/contraparte pre-rellenados) → INSERT en `transactions`, marca pending como approved.
+  - Rechazar → status=rejected.
+  - Editar antes de aprobar.
+- Badge con contador en sidebar/bottom-nav.
+- En `settings.tsx`: sección "Detección automática (Android)" que sólo aparece en nativo, con:
+  - Estado del permiso + botón "Otorgar acceso a notificaciones".
+  - Lista editable de apps vigiladas (nombre + package).
 
-## 4. Core Calculations (client-side utilities)
+### Fase 6 — Build & distribución
+- Documento `docs/android-build.md` con pasos:
+  1. `bun run build`
+  2. `npx cap sync android`
+  3. `cd android && ./gradlew assembleDebug`
+  4. APK en `android/app/build/outputs/apk/debug/app-debug.apk`
+  5. Sideload: activar "orígenes desconocidos" e instalar.
+- Nota clara al usuario: para producción hay que firmar con keystore propio y (si va a Play Store) justificar el permiso.
 
-- **Daily compound yield**: `balance * (1 + rate/365)^days`; simulator supports periodic deposits/withdrawals iterated day-by-day.
-- **Grace period / Invisible Cash**: given `cutoff_day` + `due_day`, compute days until cutoff, days until due, and max float window; show "dinero disponible sin intereses" per card.
-- **Allocation check**: sum of pocket percentages should equal 100; warn if not.
-- **Per-paycheck distribution**: given biweekly_salary + pockets, show peso amount per pocket.
+## Detalles técnicos
 
-## 5. Dashboard
+- **Parsers iniciales** (allowlist configurable en runtime, valores por defecto):
+  - `com.bbva.bbvacontigo` — `/Cargo por \$([\d,.]+) en (.+?)\./`
+  - `mx.com.santander.appsantander` — patrones de "Compra", "Transferencia recibida".
+  - `com.banorte.rmb.movil`
+  - `com.nu.production`
+  - `com.mercadopago.wallet`
+  - Fallback genérico: detectar `\$[\d,]+\.\d{2}` + palabras clave (`compra`, `cargo`, `abono`, `transfer`).
+- Los parsers viven en Kotlin (rápido, sin depender de red). Estructura permite agregar más sin tocar el service.
+- **Privacidad**: `rawText` se guarda cifrado en reposo (Supabase default) y sólo el `user_id` dueño lo lee (RLS). Nada sale del dispositivo salvo hacia el backend del propio usuario.
+- **Dev loop**: `capacitor.config.ts` con `server.url = 'https://id-preview--…lovable.app'` permite iterar UI sin rebuild; para probar el plugin nativo sí hay que reconstruir el APK.
+- **Duplicados**: dedupe por `(package_name, raw_text, floor(timestamp / 60s))` antes de insertar en pending.
 
-Mobile-first single scroll, desktop 3-column grid:
+## Riesgos y limitaciones
 
-- Hero: total balance across pockets + next payday countdown.
-- Pocket allocation ring (Recharts PieChart) + list with balances vs targets.
-- Credit cards strip: grace-period progress bars + total invisible cash.
-- Upcoming scheduled flows (next 7/14 days).
-- Yield projection sparkline (30/90/365 days at current rate).
+- Android puede matar el listener si el usuario restringe batería → agregar guía "excluir de optimización de batería".
+- Cada banco cambia formato de notificación ocasionalmente → parsers versionados; si no matchea, la notificación cae como "detectada sin parsear" para que el usuario la complete manualmente en vez de perderla.
+- El permiso `BIND_NOTIFICATION_LISTENER_SERVICE` requiere que el usuario lo active a mano en Ajustes del sistema (Android no permite prompt directo).
+- iOS: no viable. Si algún día se necesita, sería vía Shortcuts + compartir manual.
 
-## 6. Design System
+## Entregables al terminar
 
-Update `src/styles.css`:
-- Force dark theme by default (add `dark` class to `<html>` in root shell).
-- Tokens: background `#0F172A`, card `#1E293B`, primary emerald `#10B981`, accent violet `#8B5CF6`, warning amber `#F59E0B`, destructive rose `#EF4444`, muted slate.
-- All colors as `oklch` semantic tokens in `@theme inline`.
+- APK debug instalable.
+- Plugin `NotificationCapture` funcionando con al menos 2 bancos parseados.
+- Bandeja de detección con flujo aprobar/rechazar.
+- Documento de build y de cómo agregar un nuevo parser.
 
-Components use existing shadcn/ui (Card, Button, Input, Dialog, Tabs, Progress, Chart wrappers).
+## Preguntas antes de implementar
 
-## 7. Out of scope (later iterations)
-
-Survival algorithm, Notion CSV/JSON export, advanced projections library, realtime multi-device sync, keyboard shortcuts, week/month recurring engine execution (MVP shows next dates only; no cron job runs mutations).
-
-## 8. Technical notes
-
-- TanStack Query for data fetching (`ensureQueryData` in loaders under `_authenticated/`, `useSuspenseQuery` in components).
-- All mutations via browser supabase client (RLS enforces ownership); no server functions needed for MVP.
-- Forms with react-hook-form + zod.
-- Recharts for pie + line charts.
-- Sidebar collapsible on desktop; bottom tab nav on mobile.
+1. ¿Qué bancos/apps de pago usas tú específicamente? (Para priorizar parsers reales: BBVA, Santander, Nu, Mercado Pago, otros).
+2. ¿Quieres que las notificaciones detectadas se auto-aprueben si el parser tiene alta confianza, o siempre pasar por bandeja manual? (Recomiendo bandeja manual al inicio).
+3. ¿Necesitas que también capture SMS bancarios, o sólo notificaciones push de apps?
