@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { profileQuery } from "@/lib/queries";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { profileQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
-import { Smartphone, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Smartphone, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -108,6 +109,32 @@ function SettingsPage() {
 }
 
 function AndroidDetectionCard() {
+  const { data: profile } = useQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const { isPro } = deriveSubStatus(subscription);
+
+  if (!isPro) {
+    return (
+      <Card className="p-6 space-y-3 bg-card/70 backdrop-blur border-dashed">
+        <div className="flex items-center gap-2">
+          <Smartphone className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Detección automática (Android)</h2>
+          <Lock className="h-4 w-4 text-primary ml-auto" />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          La lectura automática de notificaciones bancarias en el APK es una función exclusiva de Pro.
+        </p>
+        <Button asChild size="sm">
+          <Link to="/upgrade">Activar Pro</Link>
+        </Button>
+      </Card>
+    );
+  }
+
+  return <AndroidDetectionCardInner />;
+}
+
+function AndroidDetectionCardInner() {
   const {
     supported,
     permissionGranted,
