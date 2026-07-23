@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_events: {
+        Row: {
+          amount_total: string | null
+          billed_at: string | null
+          created_at: string
+          currency_code: string | null
+          environment: string
+          event_type: string
+          id: string
+          invoice_url: string | null
+          paddle_subscription_id: string | null
+          paddle_transaction_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_total?: string | null
+          billed_at?: string | null
+          created_at?: string
+          currency_code?: string | null
+          environment?: string
+          event_type: string
+          id?: string
+          invoice_url?: string | null
+          paddle_subscription_id?: string | null
+          paddle_transaction_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          amount_total?: string | null
+          billed_at?: string | null
+          created_at?: string
+          currency_code?: string | null
+          environment?: string
+          event_type?: string
+          id?: string
+          invoice_url?: string | null
+          paddle_subscription_id?: string | null
+          paddle_transaction_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       counterparties: {
         Row: {
           created_at: string
