@@ -1,53 +1,41 @@
-## Objetivo
+Plan: Monetizar Finance Flow Pocket con suscripción Pro
 
-Agregar una sección de descarga del APK Android en el home (`/`) de Finance Flow Pocket, para que cualquier visitante pueda bajarlo e instalarlo y usar la lectura de notificaciones bancarias.
+1. Proveedor y verificación previa
+   - Recomendación del sistema: Paddle (Merchant of Record) por calificación de producto.
+   - Alternativa: Stripe con cálculo/recaudación de impuestos automático (no full compliance handling para México).
+   - Prerrequisito: confirmar que tienes un plan Lovable Pro o superior (Payments lo requiere).
+   - Paddle creará un sandbox de pruebas inmediatamente; pagos en vivo requieren verificación posterior.
 
-## Alcance
+2. Esquema de productos y precios
+   - Crear en Paddle dos planes Pro:
+     - Pro Mensual: ~$79 MXN / mes.
+     - Pro Anual: ~$790 MXN / año (2 meses gratis).
+   - Cada producto incluirá tax code para servicio de software (SaaS).
 
-- Solo Android APK (sin PWA, sin iOS).
-- Descarga directa del archivo `.apk` alojado dentro del proyecto.
-- Mensaje claro de propósito: lectura local de notificaciones (montos y transacciones), sin rastreo, sin envío a terceros.
+3. Backend: entitlements y suscripciones
+   - Migrar tabla `subscriptions` (`user_id`, `status`, `plan`, `paddle_subscription_id`, `current_period_end`, etc.).
+   - Migrar `profiles` con columnas `plan` (free|pro) y `pro_expires_at` para gating rápido.
+   - GRANTs y RLS: solo el usuario puede leer su propia suscripción; el webhook usa `service_role`.
 
-## Cambios
+4. Gating de funciones (freemium)
+   - Free: hasta 2 bolsillos, calculadora de interés compuesto básica, registro manual de transacciones.
+   - Pro: bolsillos ilimitados, simulador avanzado con retiros periódicos, estrategia Invisible Cash (cálculo de periodo de gracia) y detección automática de notificaciones Android.
+   - Añadir `isPro` helper y mostrar badges/CTAs de upgrade en cada ruta protegida.
 
-### 1. Alojar el APK
-- Crear carpeta `public/downloads/` y colocar ahí `finance-flow-pocket.apk`.
-  - El archivo binario se sube manualmente (yo no puedo generarlo — requiere Android Studio; ver `docs/android-build.md`).
-  - Servido en `/downloads/finance-flow-pocket.apk`.
-- Añadir versión visible (ej. `v0.1.0`) en el botón, gestionada como constante en el componente.
+5. Checkout y UI de upgrade
+   - Página/ruta `/upgrade` con tarjetas de planes y botón de checkout.
+   - Botón de suscripción redirige a Paddle Checkout (overlay o redirect).
+   - Mostrar estado de suscripción actual en `/settings`.
 
-### 2. Nueva sección en `src/routes/index.tsx`
-Insertar bloque "Descarga la app Android" antes del footer con:
-- Título + subtítulo bilingüe corto.
-- Botón principal: **Descargar APK (Android)** → `<a href="/downloads/finance-flow-pocket.apk" download>`.
-- Chip de versión y tamaño aproximado.
-- Bullets de garantías de privacidad:
-  - Lee solo notificaciones de apps bancarias que tú autorices.
-  - Extrae únicamente monto, comercio y tipo de movimiento.
-  - Los datos se guardan en tu cuenta, no se comparten con terceros.
-  - No es rastreo: puedes revocar el permiso desde Ajustes de Android en cualquier momento.
-- Enlace secundario "Cómo instalar" que abre un `<Dialog>` (shadcn) con pasos:
-  1. Descargar el APK.
-  2. Permitir "Orígenes desconocidos" para el navegador/archivador.
-  3. Abrir el APK e instalar.
-  4. En la app, ir a Ajustes → Detección automática → otorgar acceso a notificaciones.
-- Nota: "iOS no soporta lectura de notificaciones de otras apps por restricciones de Apple."
+6. Webhook Paddle
+   - Ruta pública `/api/public/webhooks/paddle`.
+   - Verificar firma del webhook con `PADDLE_WEBHOOK_SECRET`.
+   - Manejar eventos: `checkout.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`.
+   - Actualizar tabla `subscriptions` y campo `plan` en `profiles`.
 
-### 3. Estilo
-- Reutilizar el look glass del home (`bg-card/70 backdrop-blur-md border-border/60`).
-- Icono `Download` de `lucide-react`.
-- Mantener fondo cósmico ya existente.
+7. Testing y go-live
+   - Probar checkout con tarjetas de prueba de Paddle.
+   - Confirmar que el webhook actualiza el estado del usuario.
+   - Una vez validado, pasar Paddle a live y completar verificación del vendedor.
 
-### 4. Nada de PWA
-- No agregar manifest de instalación, service worker ni prompts de "Add to Home Screen" (regla del proyecto para no romper el preview de Lovable).
-
-## Fuera de alcance
-
-- Generar el APK automáticamente (sigue siendo build local con `docs/android-build.md`).
-- Firmar/subir a Play Store.
-- Versión iOS.
-- Auto-update del APK.
-
-## Nota importante
-
-Para que el botón funcione realmente, tú debes generar el APK localmente siguiendo `docs/android-build.md` y subir el archivo a `public/downloads/finance-flow-pocket.apk`. Mientras no exista, el botón devolverá 404. ¿Quieres que además muestre un estado "Próximamente" si el archivo no existe, o lo dejamos como enlace directo asumiendo que subirás el APK?
+Pregunta de decisión: ¿Confirmas Paddle como proveedor para empezar, o prefieres Stripe? Paddle es la recomendación porque actúa como vendedor legal y maneja impuestos/compliance automáticamente.
