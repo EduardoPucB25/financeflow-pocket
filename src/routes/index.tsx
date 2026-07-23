@@ -1,7 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TrendingUp, CreditCard, Wallet, Sparkles } from "lucide-react";
+import { TrendingUp, CreditCard, Wallet, Sparkles, Download, Smartphone, ShieldCheck, Bell } from "lucide-react";
 import { CosmicBackground } from "@/components/CosmicBackground";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import logoAsset from "@/assets/logo.svg.asset.json";
+
+const APK_URL = "/downloads/finance-flow-pocket.apk";
+const APK_VERSION = "v0.1.0";
 
 export const Route = createFileRoute("/")({
   head: () => ({
