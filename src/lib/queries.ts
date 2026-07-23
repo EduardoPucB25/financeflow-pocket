@@ -1,6 +1,20 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export const detectedTransactionsQuery = () =>
+  queryOptions({
+    queryKey: ["detected_transactions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("detected_transactions")
+        .select("*")
+        .order("detected_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
 export const profileQuery = () =>
   queryOptions({
     queryKey: ["profile"],
