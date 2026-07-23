@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TrendingUp, CreditCard, Wallet, Sparkles } from "lucide-react";
 import { CosmicBackground } from "@/components/CosmicBackground";
+import logoAsset from "@/assets/logo.svg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,9 +23,11 @@ function Landing() {
       <CosmicBackground />
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2 font-semibold">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-            F
-          </span>
+          <img
+            src={logoAsset.url}
+            alt="Finance Flow Pocket"
+            className="h-8 w-8 rounded-lg"
+          />
           Finance Flow Pocket
         </div>
         <Link
