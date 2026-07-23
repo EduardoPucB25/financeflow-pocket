@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { debtsQuery } from "@/lib/queries";
+import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { debtsQuery, profileQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus, FREE_LIMITS, limitForFree } from "@/lib/subscription";
+import { HiddenByPlanNotice } from "@/components/PastDueBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { money, pct } from "@/lib/format";
 import { graceInfo } from "@/lib/finance";
-import { CreditCard, Plus, Trash2, Pencil, Landmark, Wallet, Home } from "lucide-react";
+import { CreditCard, Plus, Trash2, Pencil, Landmark, Wallet, Home, Lock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -54,6 +56,9 @@ const TYPE_META: Record<string, { label: string; icon: typeof CreditCard }> = {
 
 function DebtsPage() {
   const { data: debts } = useSuspenseQuery(debtsQuery());
+  const { data: profile } = useQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const { isPro } = deriveSubStatus(subscription);
   const qc = useQueryClient();
 
   const del = useMutation({
@@ -64,11 +69,15 @@ function DebtsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["debts"] }),
   });
 
-  const totalDebt = debts.reduce((s, d) => s + Number(d.current_balance), 0);
-  const totalMinimum = debts.reduce((s, d) => s + Number(d.minimum_payment), 0);
-  const totalInvisible = debts
-    .filter((d) => d.debt_type === "card")
-    .reduce((s, c) => s + (Number(c.credit_limit ?? 0) - Number(c.current_balance)), 0);
+  const { visible: visibleDebts, hiddenCount } = limitForFree(debts, isPro, FREE_LIMITS.debts);
+  const totalDebt = visibleDebts.reduce((s, d) => s + Number(d.current_balance), 0);
+  const totalMinimum = visibleDebts.reduce((s, d) => s + Number(d.minimum_payment), 0);
+  const totalInvisible = isPro
+    ? visibleDebts
+        .filter((d) => d.debt_type === "card")
+        .reduce((s, c) => s + (Number(c.credit_limit ?? 0) - Number(c.current_balance)), 0)
+    : 0;
+  const atFreeLimit = !isPro && debts.length >= FREE_LIMITS.debts;
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -77,12 +86,28 @@ function DebtsPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Deudas</h1>
           <p className="text-sm text-muted-foreground">
             Total: <span className="text-destructive font-medium">{money(totalDebt)}</span> · Pago mínimo mensual:{" "}
-            <span className="text-warning">{money(totalMinimum)}</span> · Invisible Cash:{" "}
-            <span className="text-accent">{money(totalInvisible)}</span>
+            <span className="text-warning">{money(totalMinimum)}</span>
+            {isPro ? (
+              <>
+                {" "}· Invisible Cash: <span className="text-accent">{money(totalInvisible)}</span>
+              </>
+            ) : (
+              <>
+                {" "}· <span className="inline-flex items-center gap-1 text-muted-foreground"><Lock className="h-3 w-3" />Invisible Cash (Pro)</span>
+              </>
+            )}
           </p>
         </div>
-        <DebtDialog mode="create" />
+        <DebtDialog mode="create" disabled={atFreeLimit} />
       </div>
+
+      <HiddenByPlanNotice hiddenCount={hiddenCount} entity="deudas" />
+
+      {atFreeLimit && (
+        <div className="rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+          Alcanzaste el límite Free de {FREE_LIMITS.debts} deudas. <a href="/upgrade" className="underline text-primary">Actualiza a Pro</a> para registrar deudas ilimitadas.
+        </div>
+      )}
 
       {debts.length === 0 ? (
         <Card className="p-10 text-center">
@@ -93,7 +118,7 @@ function DebtsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {debts.map((d) => {
+          {visibleDebts.map((d) => {
             const Icon = (TYPE_META[d.debt_type] ?? TYPE_META.other).icon;
             const isCard = d.debt_type === "card" && d.cutoff_day && d.due_day;
             const g = isCard ? graceInfo(d.cutoff_day!, d.due_day!) : null;
@@ -145,13 +170,19 @@ function DebtsPage() {
                   </div>
                 )}
 
-                {isCard && g && (
+                {isCard && g && isPro && (
                   <div className="rounded-md bg-accent/10 border border-accent/30 p-3 text-sm">
                     <div className="text-xs text-muted-foreground">Invisible Cash disponible</div>
                     <div className="text-xl font-bold text-accent">{money(available)}</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Corte en {Math.max(0, g.daysToCutoff)}d · Pago en {g.daysToDue}d · Ventana {g.maxFloat}d
                     </div>
+                  </div>
+                )}
+                {isCard && !isPro && (
+                  <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-3 text-sm flex items-center gap-2 text-muted-foreground">
+                    <Lock className="h-4 w-4 text-primary" />
+                    <span>Estrategia Invisible Cash disponible en <a href="/upgrade" className="text-primary underline">Pro</a>.</span>
                   </div>
                 )}
 
@@ -169,7 +200,7 @@ function DebtsPage() {
   );
 }
 
-function DebtDialog({ mode, debt }: { mode: "create" | "edit"; debt?: DebtRow }) {
+function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: DebtRow; disabled?: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -226,7 +257,7 @@ function DebtDialog({ mode, debt }: { mode: "create" | "edit"; debt?: DebtRow })
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button><Plus className="h-4 w-4 mr-1" /> Nueva deuda</Button>
+          <Button disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nueva deuda</Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">

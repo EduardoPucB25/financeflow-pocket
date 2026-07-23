@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { seedDefaultPockets, detectedTransactionsQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus } from "@/lib/subscription";
+import { PastDueBanner } from "@/components/PastDueBanner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import logoAsset from "@/assets/logo.svg.asset.json";
 import {
@@ -62,14 +64,7 @@ function AuthedLayout() {
   const pendingCount = pendingDetected.data ?? 0;
 
   const { data: subscription } = useQuery(subscriptionQuery(user.id));
-  const isPro = Boolean(
-    subscription &&
-      (subscription.status === "active" ||
-        subscription.status === "trialing" ||
-        (subscription.status === "canceled" &&
-          subscription.current_period_end &&
-          new Date(subscription.current_period_end) > new Date())),
-  );
+  const { isPro, isPastDue } = deriveSubStatus(subscription);
 
   useEffect(() => {
     seedDefaultPockets(user.id).catch(console.error);
@@ -185,6 +180,7 @@ function AuthedLayout() {
       )}
 
       <main className="flex-1 min-w-0">
+        <PastDueBanner show={isPastDue} />
         <Outlet />
       </main>
     </div>

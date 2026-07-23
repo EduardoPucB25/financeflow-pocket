@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { flowsQuery, pocketsQuery } from "@/lib/queries";
+import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { flowsQuery, pocketsQuery, profileQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus, FREE_LIMITS, limitForFree } from "@/lib/subscription";
+import { HiddenByPlanNotice } from "@/components/PastDueBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,9 @@ const DOW_LABEL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Vierne
 function FlowsPage() {
   const { data: flows } = useSuspenseQuery(flowsQuery());
   const { data: pockets } = useSuspenseQuery(pocketsQuery());
+  const { data: profile } = useQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const { isPro } = deriveSubStatus(subscription);
   const qc = useQueryClient();
 
   const del = useMutation({
@@ -64,8 +69,10 @@ function FlowsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["scheduled_flows"] }),
   });
 
-  const inflow = flows.filter((f) => f.flow_type === "deposit").reduce((s, f) => s + Number(f.amount), 0);
-  const outflow = flows.filter((f) => f.flow_type === "withdrawal").reduce((s, f) => s + Number(f.amount), 0);
+  const { visible: visibleFlows, hiddenCount } = limitForFree(flows, isPro, FREE_LIMITS.flows);
+  const inflow = visibleFlows.filter((f) => f.flow_type === "deposit").reduce((s, f) => s + Number(f.amount), 0);
+  const outflow = visibleFlows.filter((f) => f.flow_type === "withdrawal").reduce((s, f) => s + Number(f.amount), 0);
+  const atFreeLimit = !isPro && flows.length >= FREE_LIMITS.flows;
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -77,16 +84,24 @@ function FlowsPage() {
             <span className="text-destructive">{money(outflow)}</span>
           </p>
         </div>
-        <FlowDialog mode="create" pockets={pockets} />
+        <FlowDialog mode="create" pockets={pockets} disabled={atFreeLimit} />
       </div>
 
-      {flows.length === 0 ? (
+      <HiddenByPlanNotice hiddenCount={hiddenCount} entity="flujos" />
+
+      {atFreeLimit && (
+        <div className="rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+          Alcanzaste el límite Free de {FREE_LIMITS.flows} flujos. <a href="/upgrade" className="underline text-primary">Actualiza a Pro</a> para flujos ilimitados.
+        </div>
+      )}
+
+      {visibleFlows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
           Aún no tienes flujos programados.
         </Card>
       ) : (
         <Card className="divide-y divide-border">
-          {flows.map((f) => {
+          {visibleFlows.map((f) => {
             const freqDesc =
               f.frequency === "weekly" && f.day_of_week !== null
                 ? `Semanal (${DOW_LABEL[f.day_of_week]})`
@@ -129,7 +144,7 @@ function FlowsPage() {
   );
 }
 
-function FlowDialog({ mode, pockets, flow }: { mode: "create" | "edit"; pockets: Pocket[]; flow?: FlowRow }) {
+function FlowDialog({ mode, pockets, flow, disabled }: { mode: "create" | "edit"; pockets: Pocket[]; flow?: FlowRow; disabled?: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -179,7 +194,7 @@ function FlowDialog({ mode, pockets, flow }: { mode: "create" | "edit"; pockets:
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
+          <Button disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
         )}
       </DialogTrigger>
       <DialogContent>
