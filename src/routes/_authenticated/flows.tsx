@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { flowsQuery, pocketsQuery } from "@/lib/queries";
+import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { flowsQuery, pocketsQuery, profileQuery, subscriptionQuery } from "@/lib/queries";
+import { deriveSubStatus, FREE_LIMITS, limitForFree } from "@/lib/subscription";
+import { HiddenByPlanNotice } from "@/components/PastDueBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
