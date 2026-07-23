@@ -144,7 +144,7 @@ function FlowsPage() {
   );
 }
 
-function FlowDialog({ mode, pockets, flow }: { mode: "create" | "edit"; pockets: Pocket[]; flow?: FlowRow }) {
+function FlowDialog({ mode, pockets, flow, disabled }: { mode: "create" | "edit"; pockets: Pocket[]; flow?: FlowRow; disabled?: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -194,7 +194,7 @@ function FlowDialog({ mode, pockets, flow }: { mode: "create" | "edit"; pockets:
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
+          <Button disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
         )}
       </DialogTrigger>
       <DialogContent>
