@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { CosmicBackground } from "@/components/CosmicBackground";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
