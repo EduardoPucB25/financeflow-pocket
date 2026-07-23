@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Ajustes — FinFlow" },
+      { title: "Ajustes — Finance Flow Pocket" },
       { name: "description", content: "Configura tu ingreso, frecuencia de pago y tasa de rendimiento." },
     ],
   }),

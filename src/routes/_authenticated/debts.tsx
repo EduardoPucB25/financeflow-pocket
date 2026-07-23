@@ -19,7 +19,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/debts")({
   head: () => ({
     meta: [
-      { title: "Deudas — FinFlow" },
+      { title: "Deudas — Finance Flow Pocket" },
       { name: "description", content: "Gestiona tarjetas, préstamos y otras deudas. Optimiza pagos y periodo de gracia." },
     ],
   }),

@@ -17,7 +17,7 @@ import { Save, Trash2 } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/simulator")({
   head: () => ({
     meta: [
-      { title: "Simulador — FinFlow" },
+      { title: "Simulador — Finance Flow Pocket" },
       { name: "description", content: "Simula tu balance con interés compuesto diario, depósitos y retiros." },
     ],
   }),
