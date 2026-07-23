@@ -101,7 +101,7 @@ function FlowsPage() {
         </Card>
       ) : (
         <Card className="divide-y divide-border">
-          {flows.map((f) => {
+          {visibleFlows.map((f) => {
             const freqDesc =
               f.frequency === "weekly" && f.day_of_week !== null
                 ? `Semanal (${DOW_LABEL[f.day_of_week]})`
