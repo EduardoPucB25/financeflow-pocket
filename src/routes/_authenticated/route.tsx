@@ -91,7 +91,12 @@ function AuthedLayout() {
                 )}
               >
                 <n.icon className="h-4 w-4" />
-                {n.label}
+                <span className="flex-1">{n.label}</span>
+                {n.to === "/inbox" && pendingCount > 0 && (
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground min-w-[18px] text-center">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}
