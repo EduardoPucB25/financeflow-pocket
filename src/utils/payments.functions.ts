@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { gatewayFetch, type PaddleEnv } from "@/lib/paddle.server";
 
-export const resolvePaddlePrice = createServerFn({ method: "GET" })
+export const resolvePaddlePrice = createServerFn({ method: "POST" })
   .inputValidator((data: { priceId: string; environment: PaddleEnv }) => data)
   .handler(async ({ data }) => {
     const response = await gatewayFetch(data.environment, `/prices?external_id=${encodeURIComponent(data.priceId)}`);
