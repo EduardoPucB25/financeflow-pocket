@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { money, pct } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, Lock, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -80,9 +81,12 @@ function PocketsPage() {
                     </div>
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <EditPocketDialog pocket={p} />
+                  <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
               <div className="text-2xl font-bold">{money(p.current_balance)}</div>
               <div className="grid grid-cols-2 gap-2">
