@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { profileQuery, subscriptionQuery } from "@/lib/queries";
+import { useServerFn } from "@tanstack/react-start";
+import { profileQuery, subscriptionQuery, billingEventsQuery } from "@/lib/queries";
 import { deriveSubStatus } from "@/lib/subscription";
+import { getPaddleEnvironment } from "@/lib/paddle";
+import { createCustomerPortalSession } from "@/utils/billing.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
-import { Smartphone, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
+import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
