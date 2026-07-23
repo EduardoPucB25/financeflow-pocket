@@ -151,37 +151,72 @@ function Dashboard() {
         </Card>
       </div>
 
-      {/* Cards + flows */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Debts + transactions + flows */}
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Tarjetas · Periodo de gracia</h2>
-            <Link to="/cards" className="text-xs text-primary hover:underline">Ver todas</Link>
+            <div>
+              <h2 className="font-semibold">Deudas · Periodo de gracia</h2>
+              <p className="text-xs text-muted-foreground">Total: <span className="text-destructive">{money(totalDebt)}</span></p>
+            </div>
+            <Link to="/debts" className="text-xs text-primary hover:underline">Ver todas</Link>
           </div>
-          {cards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aún no has agregado tarjetas.</p>
+          {debts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aún no has agregado deudas.</p>
           ) : (
             <div className="space-y-4">
-              {cards.map((c) => {
+              {cards.slice(0, 3).map((c) => {
+                if (!c.cutoff_day || !c.due_day) return null;
                 const g = graceInfo(c.cutoff_day, c.due_day);
                 const daysLeft = Math.max(0, g.daysToCutoff);
                 const pctLeft = Math.round(((g.maxFloat - daysLeft) / g.maxFloat) * 100);
                 return (
                   <div key={c.id} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{c.card_name}</span>
-                      <span className="text-muted-foreground">
-                        {daysLeft}d al corte · {g.daysToDue}d al pago
-                      </span>
+                      <span className="font-medium">{c.name}</span>
+                      <span className="text-muted-foreground">{daysLeft}d/{g.daysToDue}d</span>
                     </div>
                     <Progress value={pctLeft} />
                     <div className="text-xs text-muted-foreground">
-                      Disponible sin intereses: {money(Number(c.credit_limit) - Number(c.current_balance))}
+                      Sin intereses: {money(Number(c.credit_limit ?? 0) - Number(c.current_balance))}
                     </div>
                   </div>
                 );
               })}
+              {debts.filter((d) => d.debt_type !== "card").slice(0, 3).map((d) => (
+                <div key={d.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium truncate">{d.name}</span>
+                  <span className="text-destructive">{money(d.current_balance)}</span>
+                </div>
+              ))}
             </div>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2"><Receipt className="h-4 w-4" /> Recientes</h2>
+            <Link to="/transactions" className="text-xs text-primary hover:underline">Ver todas</Link>
+          </div>
+          {recentTx.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin transacciones registradas.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {recentTx.map((t) => (
+                <li key={t.id} className="py-2 flex items-center justify-between text-sm">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{t.description || t.kind}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(t.occurred_at).toLocaleDateString("es-MX")}
+                    </div>
+                  </div>
+                  <span className={t.kind === "income" ? "text-primary" : "text-destructive"}>
+                    {t.kind === "income" ? "+" : "−"}
+                    {money(t.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </Card>
 

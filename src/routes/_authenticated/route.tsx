@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Wallet,
   CreditCard,
+  Receipt,
   Repeat,
   LineChart,
   Settings,
@@ -29,7 +30,8 @@ export const Route = createFileRoute("/_authenticated")({
 const NAV = [
   { to: "/dashboard", label: "Panel", icon: LayoutDashboard },
   { to: "/pockets", label: "Bolsillos", icon: Wallet },
-  { to: "/cards", label: "Tarjetas", icon: CreditCard },
+  { to: "/debts", label: "Deudas", icon: CreditCard },
+  { to: "/transactions", label: "Movimientos", icon: Receipt },
   { to: "/flows", label: "Flujos", icon: Repeat },
   { to: "/simulator", label: "Simulador", icon: LineChart },
   { to: "/settings", label: "Ajustes", icon: Settings },
