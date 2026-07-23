@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { pocketsQuery, profileQuery } from "@/lib/queries";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery, useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { pocketsQuery, profileQuery, subscriptionQuery } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { money, pct } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Lock, Pencil } from "lucide-react";
+import { Plus, Trash2, Lock, Pencil, Crown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -30,6 +30,15 @@ export const Route = createFileRoute("/_authenticated/pockets")({
 function PocketsPage() {
   const { data: pockets } = useSuspenseQuery(pocketsQuery());
   const { data: profile } = useSuspenseQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const isPro = Boolean(
+    subscription &&
+      (subscription.status === "active" ||
+        subscription.status === "trialing" ||
+        (subscription.status === "canceled" &&
+          subscription.current_period_end &&
+          new Date(subscription.current_period_end) > new Date())),
+  );
   const qc = useQueryClient();
   const salary = Number(profile?.biweekly_salary ?? 0);
   const totalPct = pockets.reduce((s, p) => s + Number(p.target_percentage), 0);
@@ -60,8 +69,23 @@ function PocketsPage() {
             Total asignado: <span className={totalPct === 100 ? "text-primary" : "text-warning"}>{pct(totalPct)}</span>
           </p>
         </div>
-        <NewPocketDialog />
+        <NewPocketDialog isPro={isPro} pocketsCount={pockets.length} />
       </div>
+
+      {!isPro && pockets.length >= 2 && (
+        <div className="rounded-xl border border-border/60 bg-primary/5 p-4 text-sm">
+          <div className="font-medium flex items-center gap-2">
+            <Crown className="h-4 w-4 text-primary" />
+            Límite alcanzado en plan gratuito
+          </div>
+          <p className="text-muted-foreground mt-1">
+            El plan gratuito permite hasta 2 bolsillos. Sube a Pro para crear bolsillos ilimitados.
+          </p>
+          <Button asChild className="mt-3" size="sm">
+            <Link to="/upgrade">Ver planes Pro</Link>
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {pockets.map((p) => {
@@ -121,12 +145,14 @@ function PocketsPage() {
   );
 }
 
-function NewPocketDialog() {
+function NewPocketDialog({ isPro, pocketsCount }: { isPro: boolean; pocketsCount: number }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [percentage, setPercentage] = useState(10);
   const [color, setColor] = useState("#10B981");
+
+  const locked = !isPro && pocketsCount >= 2;
 
   const create = useMutation({
     mutationFn: async () => {
@@ -151,11 +177,19 @@ function NewPocketDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-1" /> Nuevo bolsillo
+      {locked ? (
+        <Button asChild>
+          <Link to="/upgrade">
+            <Crown className="h-4 w-4 mr-1" /> Sube a Pro
+          </Link>
         </Button>
-      </DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4 mr-1" /> Nuevo bolsillo
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nuevo bolsillo</DialogTitle>

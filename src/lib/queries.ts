@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const detectedTransactionsQuery = () =>
   queryOptions({
@@ -23,6 +24,25 @@ export const profileQuery = () =>
       if (error) throw error;
       return data;
     },
+  });
+
+export const subscriptionQuery = (userId: string | undefined) =>
+  queryOptions({
+    queryKey: ["subscription", userId, getPaddleEnvironment()],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("environment", getPaddleEnvironment())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
   });
 
 export const pocketsQuery = () =>
