@@ -1,25 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { profileQuery, pocketsQuery, cardsQuery, flowsQuery } from "@/lib/queries";
+import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery } from "@/lib/queries";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { money, pct } from "@/lib/format";
 import { compoundDaily, graceInfo, daysUntilPayday } from "@/lib/finance";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-import { TrendingUp, CreditCard, Wallet, Calendar } from "lucide-react";
+import { TrendingUp, CreditCard, Wallet, Calendar, Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Panel — FinFlow" },
-      { name: "description", content: "Vista general de tus finanzas: bolsillos, tarjetas y rendimiento." },
+      { name: "description", content: "Vista general de tus finanzas: bolsillos, deudas, transacciones y rendimiento." },
     ],
   }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(profileQuery());
     context.queryClient.ensureQueryData(pocketsQuery());
-    context.queryClient.ensureQueryData(cardsQuery());
+    context.queryClient.ensureQueryData(debtsQuery());
     context.queryClient.ensureQueryData(flowsQuery());
+    context.queryClient.ensureQueryData(transactionsQuery());
   },
   component: Dashboard,
 });
@@ -27,15 +28,22 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { data: profile } = useSuspenseQuery(profileQuery());
   const { data: pockets } = useSuspenseQuery(pocketsQuery());
-  const { data: cards } = useSuspenseQuery(cardsQuery());
+  const { data: debts } = useSuspenseQuery(debtsQuery());
   const { data: flows } = useSuspenseQuery(flowsQuery());
+  const { data: transactions } = useSuspenseQuery(transactionsQuery());
 
   const totalBalance = pockets.reduce((s, p) => s + Number(p.current_balance), 0);
   const totalPct = pockets.reduce((s, p) => s + Number(p.target_percentage), 0);
   const annualRate = Number(profile?.annual_yield_rate ?? 15);
-  const invisibleCash = cards.reduce((s, c) => s + (Number(c.credit_limit) - Number(c.current_balance)), 0);
+  const cards = debts.filter((d) => d.debt_type === "card");
+  const totalDebt = debts.reduce((s, d) => s + Number(d.current_balance), 0);
+  const invisibleCash = cards.reduce(
+    (s, c) => s + (Number(c.credit_limit ?? 0) - Number(c.current_balance)),
+    0,
+  );
   const salary = Number(profile?.biweekly_salary ?? 0);
   const paydayIn = daysUntilPayday([15, 30]);
+  const recentTx = transactions.slice(0, 5);
 
   const projectionData = [30, 60, 90, 180, 365].map((d) => ({
     day: `${d}d`,
@@ -143,37 +151,72 @@ function Dashboard() {
         </Card>
       </div>
 
-      {/* Cards + flows */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Debts + transactions + flows */}
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Tarjetas · Periodo de gracia</h2>
-            <Link to="/cards" className="text-xs text-primary hover:underline">Ver todas</Link>
+            <div>
+              <h2 className="font-semibold">Deudas · Periodo de gracia</h2>
+              <p className="text-xs text-muted-foreground">Total: <span className="text-destructive">{money(totalDebt)}</span></p>
+            </div>
+            <Link to="/debts" className="text-xs text-primary hover:underline">Ver todas</Link>
           </div>
-          {cards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aún no has agregado tarjetas.</p>
+          {debts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aún no has agregado deudas.</p>
           ) : (
             <div className="space-y-4">
-              {cards.map((c) => {
+              {cards.slice(0, 3).map((c) => {
+                if (!c.cutoff_day || !c.due_day) return null;
                 const g = graceInfo(c.cutoff_day, c.due_day);
                 const daysLeft = Math.max(0, g.daysToCutoff);
                 const pctLeft = Math.round(((g.maxFloat - daysLeft) / g.maxFloat) * 100);
                 return (
                   <div key={c.id} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{c.card_name}</span>
-                      <span className="text-muted-foreground">
-                        {daysLeft}d al corte · {g.daysToDue}d al pago
-                      </span>
+                      <span className="font-medium">{c.name}</span>
+                      <span className="text-muted-foreground">{daysLeft}d/{g.daysToDue}d</span>
                     </div>
                     <Progress value={pctLeft} />
                     <div className="text-xs text-muted-foreground">
-                      Disponible sin intereses: {money(Number(c.credit_limit) - Number(c.current_balance))}
+                      Sin intereses: {money(Number(c.credit_limit ?? 0) - Number(c.current_balance))}
                     </div>
                   </div>
                 );
               })}
+              {debts.filter((d) => d.debt_type !== "card").slice(0, 3).map((d) => (
+                <div key={d.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium truncate">{d.name}</span>
+                  <span className="text-destructive">{money(d.current_balance)}</span>
+                </div>
+              ))}
             </div>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2"><Receipt className="h-4 w-4" /> Recientes</h2>
+            <Link to="/transactions" className="text-xs text-primary hover:underline">Ver todas</Link>
+          </div>
+          {recentTx.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin transacciones registradas.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {recentTx.map((t) => (
+                <li key={t.id} className="py-2 flex items-center justify-between text-sm">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{t.description || t.kind}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(t.occurred_at).toLocaleDateString("es-MX")}
+                    </div>
+                  </div>
+                  <span className={t.kind === "income" ? "text-primary" : "text-destructive"}>
+                    {t.kind === "income" ? "+" : "−"}
+                    {money(t.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </Card>
 

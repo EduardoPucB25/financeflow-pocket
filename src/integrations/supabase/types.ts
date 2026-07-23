@@ -14,40 +14,85 @@ export type Database = {
   }
   public: {
     Tables: {
-      credit_cards: {
+      counterparties: {
         Row: {
-          card_name: string
           created_at: string
-          credit_limit: number
-          current_balance: number
-          cutoff_day: number
-          due_day: number
           id: string
-          status: string
+          kind: string
+          name: string
+          notes: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          card_name: string
           created_at?: string
-          credit_limit?: number
-          current_balance?: number
-          cutoff_day: number
-          due_day: number
           id?: string
-          status?: string
+          kind?: string
+          name: string
+          notes?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          card_name?: string
           created_at?: string
-          credit_limit?: number
-          current_balance?: number
-          cutoff_day?: number
-          due_day?: number
           id?: string
+          kind?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      debts: {
+        Row: {
+          created_at: string
+          credit_limit: number | null
+          current_balance: number
+          cutoff_day: number | null
+          debt_type: string
+          due_day: number | null
+          id: string
+          interest_rate: number
+          minimum_payment: number
+          name: string
+          notes: string | null
+          status: string
+          target_payoff_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credit_limit?: number | null
+          current_balance?: number
+          cutoff_day?: number | null
+          debt_type?: string
+          due_day?: number | null
+          id?: string
+          interest_rate?: number
+          minimum_payment?: number
+          name: string
+          notes?: string | null
           status?: string
+          target_payoff_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credit_limit?: number | null
+          current_balance?: number
+          cutoff_day?: number | null
+          debt_type?: string
+          due_day?: number | null
+          id?: string
+          interest_rate?: number
+          minimum_payment?: number
+          name?: string
+          notes?: string | null
+          status?: string
+          target_payoff_date?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -168,6 +213,79 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "scheduled_flows_pocket_id_fkey"
+            columns: ["pocket_id"]
+            isOneToOne: false
+            referencedRelation: "pockets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          counterparty_id: string | null
+          created_at: string
+          debt_id: string | null
+          description: string
+          id: string
+          include_in_totals: boolean
+          kind: string
+          notes: string | null
+          occurred_at: string
+          pocket_id: string | null
+          purpose: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          counterparty_id?: string | null
+          created_at?: string
+          debt_id?: string | null
+          description?: string
+          id?: string
+          include_in_totals?: boolean
+          kind?: string
+          notes?: string | null
+          occurred_at?: string
+          pocket_id?: string | null
+          purpose?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          counterparty_id?: string | null
+          created_at?: string
+          debt_id?: string | null
+          description?: string
+          id?: string
+          include_in_totals?: boolean
+          kind?: string
+          notes?: string | null
+          occurred_at?: string
+          pocket_id?: string | null
+          purpose?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_pocket_id_fkey"
             columns: ["pocket_id"]
             isOneToOne: false
             referencedRelation: "pockets"
