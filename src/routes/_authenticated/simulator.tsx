@@ -120,6 +120,7 @@ function SimulatorPage() {
               <Select value={form.deposit_freq} onValueChange={(v) => setForm({ ...form, deposit_freq: v as Frequency })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
                   <SelectItem value="weekly">Semanal</SelectItem>
                   <SelectItem value="biweekly">Quincenal</SelectItem>
                   <SelectItem value="monthly">Mensual</SelectItem>
@@ -136,6 +137,7 @@ function SimulatorPage() {
               <Select value={form.withdrawal_freq} onValueChange={(v) => setForm({ ...form, withdrawal_freq: v as Frequency })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
                   <SelectItem value="weekly">Semanal</SelectItem>
                   <SelectItem value="biweekly">Quincenal</SelectItem>
                   <SelectItem value="monthly">Mensual</SelectItem>
