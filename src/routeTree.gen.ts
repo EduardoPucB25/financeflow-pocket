@@ -21,7 +21,6 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedFlowsRouteImport } from './routes/_authenticated/flows'
 import { Route as AuthenticatedDebtsRouteImport } from './routes/_authenticated/debts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as ApiInternalSeedUserRouteImport } from './routes/api/internal/seed-user'
 import { Route as AuthenticatedCheckoutSuccessRouteImport } from './routes/_authenticated/checkout.success'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -85,11 +84,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiInternalSeedUserRoute = ApiInternalSeedUserRouteImport.update({
-  id: '/api/internal/seed-user',
-  path: '/api/internal/seed-user',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedCheckoutSuccessRoute =
   AuthenticatedCheckoutSuccessRouteImport.update({
     id: '/checkout/success',
@@ -116,7 +110,6 @@ export interface FileRoutesByFullPath {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/upgrade': typeof AuthenticatedUpgradeRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
-  '/api/internal/seed-user': typeof ApiInternalSeedUserRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -132,7 +125,6 @@ export interface FileRoutesByTo {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/upgrade': typeof AuthenticatedUpgradeRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
-  '/api/internal/seed-user': typeof ApiInternalSeedUserRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -150,7 +142,6 @@ export interface FileRoutesById {
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/_authenticated/upgrade': typeof AuthenticatedUpgradeRoute
   '/_authenticated/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
-  '/api/internal/seed-user': typeof ApiInternalSeedUserRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -168,7 +159,6 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/upgrade'
     | '/checkout/success'
-    | '/api/internal/seed-user'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -184,7 +174,6 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/upgrade'
     | '/checkout/success'
-    | '/api/internal/seed-user'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -201,7 +190,6 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions'
     | '/_authenticated/upgrade'
     | '/_authenticated/checkout/success'
-    | '/api/internal/seed-user'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -209,7 +197,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiInternalSeedUserRoute: typeof ApiInternalSeedUserRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -299,13 +286,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/internal/seed-user': {
-      id: '/api/internal/seed-user'
-      path: '/api/internal/seed-user'
-      fullPath: '/api/internal/seed-user'
-      preLoaderRoute: typeof ApiInternalSeedUserRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/checkout/success': {
       id: '/_authenticated/checkout/success'
       path: '/checkout/success'
@@ -356,9 +336,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiInternalSeedUserRoute: ApiInternalSeedUserRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
