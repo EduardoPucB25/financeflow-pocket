@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { seedDefaultPockets } from "@/lib/queries";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { seedDefaultPockets, detectedTransactionsQuery } from "@/lib/queries";
+import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import {
   LayoutDashboard,
   Wallet,
@@ -13,6 +14,7 @@ import {
   Settings,
   LogOut,
   Menu,
+  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,7 @@ const NAV = [
   { to: "/pockets", label: "Bolsillos", icon: Wallet },
   { to: "/debts", label: "Deudas", icon: CreditCard },
   { to: "/transactions", label: "Movimientos", icon: Receipt },
+  { to: "/inbox", label: "Bandeja", icon: Inbox },
   { to: "/flows", label: "Flujos", icon: Repeat },
   { to: "/simulator", label: "Simulador", icon: LineChart },
   { to: "/settings", label: "Ajustes", icon: Settings },
@@ -43,6 +46,16 @@ function AuthedLayout() {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Activates the Android notification-listener bridge on native builds.
+  // On web this is a safe no-op.
+  useNotificationCapture(user.id);
+
+  const pendingDetected = useQuery({
+    ...detectedTransactionsQuery(),
+    select: (rows) => rows.filter((r) => r.status === "pending").length,
+  });
+  const pendingCount = pendingDetected.data ?? 0;
 
   useEffect(() => {
     seedDefaultPockets(user.id).catch(console.error);
@@ -78,7 +91,12 @@ function AuthedLayout() {
                 )}
               >
                 <n.icon className="h-4 w-4" />
-                {n.label}
+                <span className="flex-1">{n.label}</span>
+                {n.to === "/inbox" && pendingCount > 0 && (
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground min-w-[18px] text-center">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -117,7 +135,14 @@ function AuthedLayout() {
                   )}
                 >
                   <n.icon className="h-4 w-4" />
-                  {n.label}
+                  <span className="relative">
+                    {n.label}
+                    {n.to === "/inbox" && pendingCount > 0 && (
+                      <span className="absolute -top-1 -right-3 text-[9px] font-semibold px-1 rounded-full bg-primary text-primary-foreground">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               );
             })}
