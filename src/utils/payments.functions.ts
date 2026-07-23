@@ -25,7 +25,7 @@ export interface DiscountStatus {
   currencyCode: string | null;
 }
 
-export const getDiscountStatus = createServerFn({ method: "GET" })
+export const getDiscountStatus = createServerFn({ method: "POST" })
   .inputValidator((data: { code: string; environment: PaddleEnv }) => data)
   .handler(async ({ data }) => {
     const response = await gatewayFetch(
