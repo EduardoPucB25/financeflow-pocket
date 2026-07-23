@@ -216,6 +216,18 @@ function Landing() {
           </div>
         </section>
       </main>
+
+      <footer className="border-t border-border/60 bg-background/60 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div>© {new Date().getFullYear()} Finance Flow Pocket · Angel Eduardo Puc Barrera</div>
+          <nav className="flex flex-wrap items-center gap-4">
+            <Link to="/pricing" className="hover:text-foreground">Precios</Link>
+            <Link to="/terms" className="hover:text-foreground">Términos</Link>
+            <Link to="/privacy" className="hover:text-foreground">Privacidad</Link>
+            <Link to="/refund" className="hover:text-foreground">Reembolsos</Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }
