@@ -34,7 +34,7 @@ function PricingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <Link to="/" className="font-semibold">← Finance Flow Pocket</Link>
+        <Link to="/about" className="font-semibold">← Finance Flow Pocket</Link>
         <Link
           to="/auth"
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"

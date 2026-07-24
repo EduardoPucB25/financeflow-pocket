@@ -1,0 +1,70 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0F172A"/>
+
+  <style>
+    @keyframes ffpDraw   { to { stroke-dashoffset: 0; } }
+    @keyframes ffpPocket { 0% { opacity: 0; transform: translateY(16px) scale(0.94); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes ffpGlow   { 0%,100% { opacity: 0.16; transform: scale(0.95); } 50% { opacity: 0.40; transform: scale(1.08); } }
+    @keyframes ffpArrow  { 0% { opacity: 0; transform: scale(0.2); } 60% { opacity: 1; transform: scale(1.28); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes ffpPulse  { 0% { opacity: 0.7; transform: scale(0.3); } 100% { opacity: 0; transform: scale(1.9); } }
+    @keyframes ffpSpark  { 0% { opacity: 0; transform: scale(0) rotate(0deg); } 55% { opacity: 1; transform: scale(1.25) rotate(100deg); } 100% { opacity: 0.9; transform: scale(1) rotate(180deg); } }
+    @keyframes ffpShimmer{ 0%,100% { opacity: 0.9; } 50% { opacity: 0.55; } }
+
+    .ffp-glow1  { animation: ffpGlow 4s ease-in-out infinite alternate;      transform-origin: 356px 168px; }
+    .ffp-glow2  { animation: ffpGlow 4s ease-in-out infinite alternate 2s;   transform-origin: 168px 356px; }
+    .ffp-pocket { opacity: 0; animation: ffpPocket 0.9s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .ffp-line   { stroke-dasharray: 100; stroke-dashoffset: 100; animation: ffpDraw 2.6s cubic-bezier(0.25,1,0.5,1) forwards 0.35s; }
+    .ffp-line2  { animation: ffpDraw 2.6s cubic-bezier(0.25,1,0.5,1) forwards 0.35s, ffpShimmer 2.4s ease-in-out infinite 3.1s; }
+    .ffp-arrow  { opacity: 0; transform-origin: 356px 178px; animation: ffpArrow 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards 2.9s; }
+    .ffp-pulse  { opacity: 0; transform-origin: 356px 178px; animation: ffpPulse 1s ease-out forwards 2.95s; }
+    .ffp-spark  { opacity: 0; transform-box: fill-box; transform-origin: center; }
+    .ffp-spark1 { animation: ffpSpark 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards 3.25s; }
+    .ffp-spark2 { animation: ffpSpark 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards 3.4s; }
+  </style>
+
+  <defs>
+    <linearGradient id="ffpGrad" x1="150" y1="340" x2="356" y2="178" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="ffpBlur" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+
+  <!-- Glows ambientales -->
+  <circle class="ffp-glow1" cx="356" cy="168" r="96" fill="#10B981" filter="url(#ffpBlur)"/>
+  <circle class="ffp-glow2" cx="168" cy="356" r="96" fill="#8B5CF6" filter="url(#ffpBlur)"/>
+
+  <!-- Pocket glass (aparece con elevacion) -->
+  <g class="ffp-pocket">
+    <path d="M150 190C150 173 164 159 181 159H331C348 159 362 173 362 190V250C362 308 314 356 256 356C198 356 150 308 150 250V190Z"
+          fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="4"/>
+    <line x1="176" y1="216" x2="336" y2="216" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2" stroke-dasharray="4 6"/>
+    <line x1="176" y1="256" x2="336" y2="256" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2" stroke-dasharray="4 6"/>
+    <line x1="176" y1="296" x2="336" y2="296" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2" stroke-dasharray="4 6"/>
+    <!-- onda liquida (saldo flotante) -->
+    <path d="M150 262 C 178 288, 205 246, 245 246 C 283 246, 310 270, 340 270 C 356 270, 360 258, 362 250 V 250 C 362 308, 314 356, 256 356 C 198 356, 150 308, 150 250 V 262 Z"
+          fill="url(#ffpGrad)" opacity="0.22"/>
+  </g>
+
+  <!-- Linea de crecimiento: glow difuso + trazo nitido, ambos se dibujan -->
+  <path class="ffp-line" pathLength="100" d="M150 330 C 205 322, 232 250, 282 228 C 320 213, 340 198, 356 178"
+        fill="none" stroke="url(#ffpGrad)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" filter="url(#ffpBlur)"/>
+  <path class="ffp-line ffp-line2" pathLength="100" d="M150 330 C 205 322, 232 250, 282 228 C 320 213, 340 198, 356 178"
+        fill="none" stroke="url(#ffpGrad)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Pulso al aterrizar la flecha -->
+  <circle class="ffp-pulse" cx="356" cy="178" r="42" fill="none" stroke="#10B981" stroke-width="4"/>
+
+  <!-- Flecha diagonal (punta al final de la linea, centrada) -->
+  <g class="ffp-arrow">
+    <path d="M314 178 L356 178 L356 220" fill="none" stroke="#10B981" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" filter="url(#ffpBlur)"/>
+    <path d="M314 178 L356 178 L356 220" fill="none" stroke="#10B981" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Destellos de interes compuesto -->
+  <path class="ffp-spark ffp-spark1" d="M392 150 L396 162 L408 166 L396 170 L392 182 L388 170 L376 166 L388 162 Z" fill="#10B981" filter="url(#ffpBlur)"/>
+  <path class="ffp-spark ffp-spark2" d="M330 138 L333 148 L342 151 L333 154 L330 164 L327 154 L318 151 L327 148 Z" fill="#3B82F6"/>
+</svg>

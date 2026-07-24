@@ -1,0 +1,32 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0F172A"/>
+  <defs>
+    <linearGradient id="ffpGrad" x1="150" y1="340" x2="356" y2="178" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="ffpGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+
+  <!-- Glows ambientales equilibrados -->
+  <circle cx="356" cy="168" r="96" fill="#10B981" opacity="0.20" filter="url(#ffpGlow)"/>
+  <circle cx="168" cy="356" r="96" fill="#8B5CF6" opacity="0.18" filter="url(#ffpGlow)"/>
+
+  <!-- Pocket glass -->
+  <path d="M150 190C150 173 164 159 181 159H331C348 159 362 173 362 190V250C362 308 314 356 256 356C198 356 150 308 150 250V190Z"
+        fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="4"/>
+
+  <!-- Glow suave detrás de la línea -->
+  <g filter="url(#ffpGlow)" opacity="0.5">
+    <path d="M150 330 C 205 322, 232 250, 282 228 C 320 213, 340 198, 356 178" fill="none" stroke="url(#ffpGrad)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M314 178 L356 178 L356 220" fill="none" stroke="#10B981" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Linea de crecimiento nitida -->
+  <path d="M150 330 C 205 322, 232 250, 282 228 C 320 213, 340 198, 356 178" fill="none" stroke="url(#ffpGrad)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Flecha diagonal: la punta cae EXACTO al final de la linea, centrada -->
+  <path d="M314 178 L356 178 L356 220" fill="none" stroke="#10B981" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

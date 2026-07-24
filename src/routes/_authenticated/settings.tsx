@@ -13,10 +13,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
-import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown } from "lucide-react";
+import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown, Download, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -106,10 +114,57 @@ function SettingsPage() {
         </Button>
       </Card>
 
+      <SecurityCard />
       <SubscriptionCard />
       <BillingHistoryCard />
       <AndroidDetectionCard />
     </div>
+  );
+}
+
+function SecurityCard() {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const changePassword = useMutation({
+    mutationFn: async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contraseña actualizada");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const submit = () => {
+    if (newPassword.length < 6) return toast.error("La contraseña debe tener al menos 6 caracteres.");
+    if (newPassword !== confirmPassword) return toast.error("Las contraseñas no coinciden.");
+    changePassword.mutate(newPassword);
+  };
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <KeyRound className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Seguridad</h2>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Nueva contraseña</Label>
+          <Input type="password" minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Confirmar contraseña</Label>
+          <Input type="password" minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+        </div>
+      </div>
+      <Button onClick={submit} disabled={changePassword.isPending}>
+        Actualizar contraseña
+      </Button>
+    </Card>
   );
 }
 
@@ -291,11 +346,41 @@ function AndroidDetectionCardInner() {
       </div>
 
       {!supported ? (
-        <p className="text-sm text-muted-foreground">
-          Esta sección solo está activa en la app Android instalada como APK. En el navegador
-          no es posible leer notificaciones del sistema. Consulta{" "}
-          <code className="text-xs">docs/android-build.md</code> para generar el APK.
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Esta función solo funciona dentro de la app para Android instalada como APK; en el
+            navegador no es posible leer notificaciones del sistema.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="/downloads/finance-flow-pocket.apk"
+              download
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <Download className="h-4 w-4" /> Descargar APK (Android)
+            </a>
+            <Dialog>
+              <DialogTrigger className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-accent/20">
+                Cómo instalar
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Instalar Finance Flow Pocket en Android</DialogTitle>
+                  <DialogDescription>Sigue estos pasos una sola vez.</DialogDescription>
+                </DialogHeader>
+                <ol className="mt-2 space-y-2 text-sm text-muted-foreground">
+                  <li>1. Descarga el archivo APK desde este mismo botón.</li>
+                  <li>2. Cuando Android lo pida, permite instalar apps de orígenes desconocidos.</li>
+                  <li>3. Abre el APK descargado y toca Instalar.</li>
+                  <li>
+                    4. Abre la app instalada, inicia sesión y vuelve a esta pantalla para otorgar
+                    acceso a notificaciones.
+                  </li>
+                </ol>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
       ) : (
         <>
           <div

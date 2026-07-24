@@ -17,6 +17,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { NativeSplash } from "@/components/NativeSplash";
 
 function NotFoundComponent() {
   return (
@@ -80,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Finance Flow Pocket" },
       {
         name: "description",
@@ -145,6 +146,7 @@ function RootComponent() {
       <AuthListener />
       <Outlet />
       <Toaster />
+      <NativeSplash />
     </QueryClientProvider>
   );
 }

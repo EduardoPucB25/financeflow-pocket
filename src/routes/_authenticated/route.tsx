@@ -6,6 +6,8 @@ import { seedDefaultPockets, detectedTransactionsQuery, subscriptionQuery } from
 import { deriveSubStatus } from "@/lib/subscription";
 import { PastDueBanner } from "@/components/PastDueBanner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
+import { isNativeApp } from "@/lib/native/platform";
+import { MobileShell } from "@/components/MobileShell";
 import logoAsset from "@/assets/logo.svg.asset.json";
 import {
   LayoutDashboard,
@@ -76,6 +78,20 @@ function AuthedLayout() {
     await supabase.auth.signOut();
     router.navigate({ to: "/auth", replace: true });
   };
+
+  if (isNativeApp()) {
+    return (
+      <MobileShell
+        pendingCount={pendingCount}
+        userEmail={user.email ?? ""}
+        isPro={isPro}
+        isPastDue={isPastDue}
+        onSignOut={signOut}
+      >
+        <Outlet />
+      </MobileShell>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">

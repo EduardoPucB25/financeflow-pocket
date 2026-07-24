@@ -17,7 +17,7 @@ function PrivacyPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-3xl px-6 py-12 prose prose-invert prose-sm md:prose-base">
         <p className="text-sm text-muted-foreground">
-          <Link to="/" className="underline">← Volver al inicio</Link>
+          <Link to="/about" className="underline">← Volver al inicio</Link>
         </p>
         <h1>Aviso de Privacidad</h1>
         <p className="text-sm text-muted-foreground">Última actualización: 23 de julio de 2026</p>

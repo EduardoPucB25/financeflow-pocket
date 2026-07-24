@@ -17,8 +17,8 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: "https",
-    // url: "https://id-preview--3dbd9264-5174-42ca-b679-56a145ca4a62.lovable.app",
-    // cleartext: false,
+    url: "https://financeflow-pocket.lovable.app",
+    cleartext: false,
   },
 };
 
