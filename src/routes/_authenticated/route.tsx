@@ -8,7 +8,7 @@ import { PastDueBanner } from "@/components/PastDueBanner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import { isNativeApp } from "@/lib/native/platform";
 import { MobileShell } from "@/components/MobileShell";
-import logoAsset from "@/assets/logo.svg.asset.json";
+import logoUrl from "@/assets/FinFloPo.svg";
 import {
   LayoutDashboard,
   Wallet,
