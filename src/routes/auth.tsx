@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { CosmicBackground } from "@/components/CosmicBackground";
-import logoAsset from "@/assets/logo.svg.asset.json";
+import logoUrl from "@/assets/FinFloPo.svg";
 import { Wallet, TrendingUp, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
@@ -155,7 +155,7 @@ function AuthPage() {
           <Card className="w-full max-w-md mx-auto p-6 backdrop-blur-md bg-card/70 border-border/60">
             <div className="mb-6 text-center">
               <img
-                src={logoAsset.url}
+                src={logoUrl}
                 alt="Finance Flow Pocket"
                 className="mx-auto h-12 w-12 rounded-xl"
               />

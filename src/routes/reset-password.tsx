@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CosmicBackground } from "@/components/CosmicBackground";
-import logoAsset from "@/assets/logo.svg.asset.json";
+import logoUrl from "@/assets/FinFloPo.svg";
 
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
@@ -77,7 +77,7 @@ function ResetPasswordPage() {
         <Card className="w-full max-w-md p-6 backdrop-blur-md bg-card/70 border-border/60">
           <div className="mb-6 text-center">
             <img
-              src={logoAsset.url}
+              src={logoUrl}
               alt="Finance Flow Pocket"
               className="mx-auto h-12 w-12 rounded-xl"
             />
