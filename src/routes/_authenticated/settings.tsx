@@ -116,7 +116,20 @@ function SettingsPage() {
             <Input type="number" step="0.1" value={form.annual_yield_rate} onChange={(e) => setForm({ ...form, annual_yield_rate: Number(e.target.value) })} />
             <p className="text-xs text-muted-foreground">Ej. 15% para Revolut México, Nu, CETES, etc.</p>
           </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Límite de gasto mensual global</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={form.global_spend_limit_monthly}
+              onChange={(e) => setForm({ ...form, global_spend_limit_monthly: Number(e.target.value) })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Te avisamos al 75% y al superarlo. Deja 0 para desactivarlo.
+            </p>
+          </div>
         </div>
+
         <Button onClick={() => save.mutate()} disabled={save.isPending}>
           Guardar cambios
         </Button>
