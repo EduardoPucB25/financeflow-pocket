@@ -220,8 +220,12 @@ function TxDialog({
       toast.success(mode === "edit" ? "Transacción actualizada" : "Transacción registrada");
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["counterparties"] });
+      // Balances are adjusted server-side by the transaction trigger.
+      qc.invalidateQueries({ queryKey: ["pockets"] });
+      qc.invalidateQueries({ queryKey: ["debts"] });
       setOpen(false);
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
