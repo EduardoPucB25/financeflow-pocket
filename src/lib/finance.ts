@@ -114,3 +114,200 @@ export function daysUntilPayday(days: number[], today = new Date()): number {
   upcoming.sort((a, b) => a.getTime() - b.getTime());
   return Math.round((upcoming[0].getTime() - today.getTime()) / 86400000);
 }
+
+// ---------------------------------------------------------------------------
+// Credit-card cycle: real dates instead of rounded day counts.
+// ---------------------------------------------------------------------------
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Clamp a day-of-month to the actual length of that month. */
+function safeDate(year: number, month: number, day: number): Date {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay));
+}
+
+export interface CardCycle {
+  /** Date the current statement closes. */
+  cutoff: Date;
+  /** Date the statement that closes on `cutoff` must be paid. */
+  due: Date;
+  daysToCutoff: number;
+  daysToDue: number;
+  /** Longest interest-free float achievable on this card, in days. */
+  maxFloat: number;
+}
+
+/**
+ * Next cutoff and its matching due date, using whole calendar days
+ * (no millisecond rounding drift, month lengths respected).
+ */
+export function nextCutoffAndDue(cutoffDay: number, dueDay: number, today = new Date()): CardCycle {
+  const t = startOfDay(today);
+  let cutoff = safeDate(t.getFullYear(), t.getMonth(), cutoffDay);
+  if (cutoff < t) cutoff = safeDate(t.getFullYear(), t.getMonth() + 1, cutoffDay);
+
+  // The due date is the next occurrence of dueDay strictly after the cutoff.
+  let due = safeDate(cutoff.getFullYear(), cutoff.getMonth(), dueDay);
+  if (due <= cutoff) due = safeDate(cutoff.getFullYear(), cutoff.getMonth() + 1, dueDay);
+
+  const prevCutoff = safeDate(cutoff.getFullYear(), cutoff.getMonth() - 1, cutoffDay);
+  const graceDays = diffDays(cutoff, due);
+  const cycleDays = diffDays(prevCutoff, cutoff);
+
+  return {
+    cutoff,
+    due,
+    daysToCutoff: diffDays(t, cutoff),
+    daysToDue: diffDays(t, due),
+    maxFloat: cycleDays + graceDays,
+  };
+}
+
+/** Whole calendar days between two dates (b - a). */
+export function diffDays(a: Date, b: Date): number {
+  const ms = startOfDay(b).getTime() - startOfDay(a).getTime();
+  return Math.round(ms / 86400000);
+}
+
+export function formatDateEs(d: Date | string): string {
+  const date = typeof d === "string" ? new Date(`${d}T00:00:00`) : d;
+  return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+// ---------------------------------------------------------------------------
+// Yield accrual (display-only representation)
+// ---------------------------------------------------------------------------
+
+export interface Accrual {
+  days: number;
+  base: number;
+  /** base compounded daily up to today */
+  current: number;
+  /** current - base */
+  earned: number;
+}
+
+/**
+ * Accrued compound interest from a fixed start date and base amount.
+ * Purely a representation for planning — it never changes stored balances.
+ */
+export function accruedYield(
+  baseBalance: number,
+  annualPct: number,
+  startDate: string | Date | null | undefined,
+  today = new Date(),
+): Accrual {
+  const base = Number(baseBalance ?? 0);
+  if (!startDate) return { days: 0, base, current: base, earned: 0 };
+  const start = typeof startDate === "string" ? new Date(`${startDate}T00:00:00`) : startDate;
+  const days = Math.max(0, diffDays(start, today));
+  const current = compoundDaily(base, annualPct, days);
+  return { days, base, current, earned: current - base };
+}
+
+// ---------------------------------------------------------------------------
+// Spending periods & limits
+// ---------------------------------------------------------------------------
+
+export type SpendPeriod = "daily" | "weekly" | "monthly";
+
+/** Inclusive start of the current daily / weekly (Mon) / monthly period. */
+export function periodStart(period: SpendPeriod, today = new Date()): Date {
+  const t = startOfDay(today);
+  if (period === "daily") return t;
+  if (period === "weekly") {
+    const dow = (t.getDay() + 6) % 7; // Monday = 0
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate() - dow);
+  }
+  return new Date(t.getFullYear(), t.getMonth(), 1);
+}
+
+/** Days remaining in the current period, including today. */
+export function daysLeftInPeriod(period: SpendPeriod, today = new Date()): number {
+  const t = startOfDay(today);
+  if (period === "daily") return 1;
+  if (period === "weekly") {
+    const dow = (t.getDay() + 6) % 7;
+    return 7 - dow;
+  }
+  const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+  return lastDay - t.getDate() + 1;
+}
+
+export interface SpendTx {
+  occurred_at: string;
+  amount: number | string;
+  kind: string;
+  include_in_totals: boolean;
+  pocket_id: string | null;
+  debt_id: string | null;
+}
+
+/** Total spent in the current period, optionally filtered by pocket or debt. */
+export function periodSpend(
+  txs: SpendTx[],
+  period: SpendPeriod,
+  filter?: { pocketId?: string; debtId?: string },
+  today = new Date(),
+): number {
+  const from = periodStart(period, today).getTime();
+  return txs.reduce((sum, t) => {
+    if (!t.include_in_totals) return sum;
+    if (t.kind !== "expense" && t.kind !== "payment") return sum;
+    if (new Date(t.occurred_at).getTime() < from) return sum;
+    if (filter?.pocketId && t.pocket_id !== filter.pocketId) return sum;
+    if (filter?.debtId && t.debt_id !== filter.debtId) return sum;
+    return sum + Number(t.amount);
+  }, 0);
+}
+
+export type LimitLevel = "ok" | "warn" | "over";
+
+export interface LimitStatus {
+  period: SpendPeriod;
+  limit: number;
+  spent: number;
+  remaining: number;
+  ratio: number;
+  level: LimitLevel;
+}
+
+/** Compare spend against a limit. Warn at 75%, over at 100%. */
+export function limitStatus(period: SpendPeriod, limit: number, spent: number): LimitStatus {
+  const ratio = limit > 0 ? spent / limit : 0;
+  const level: LimitLevel = limit <= 0 ? "ok" : ratio >= 1 ? "over" : ratio >= 0.75 ? "warn" : "ok";
+  return { period, limit, spent, remaining: limit - spent, ratio, level };
+}
+
+/**
+ * How much can still be safely charged to a card without exceeding the
+ * available credit before the payment date, spread over the remaining days.
+ */
+export function safeToSpend(params: {
+  creditLimit: number;
+  currentBalance: number;
+  cutoffDay?: number | null;
+  dueDay?: number | null;
+  today?: Date;
+}) {
+  const today = params.today ?? new Date();
+  const available = Math.max(0, Number(params.creditLimit ?? 0) - Number(params.currentBalance ?? 0));
+  const cycle =
+    params.cutoffDay && params.dueDay ? nextCutoffAndDue(params.cutoffDay, params.dueDay, today) : null;
+  const daysToCutoff = Math.max(1, cycle?.daysToCutoff ?? 30);
+  return {
+    available,
+    cycle,
+    perDay: available / daysToCutoff,
+    perWeek: (available / daysToCutoff) * Math.min(7, daysToCutoff),
+    perCycle: available,
+    daysToCutoff,
+  };
+}
+
+export const YIELD_DISCLAIMER =
+  "Representación estimada para cálculos — no refleja el rendimiento real de tu banco.";
+

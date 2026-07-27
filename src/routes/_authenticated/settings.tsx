@@ -45,6 +45,7 @@ function SettingsPage() {
     biweekly_salary: Number(profile?.biweekly_salary ?? 5600),
     salary_frequency: profile?.salary_frequency ?? "biweekly",
     annual_yield_rate: Number(profile?.annual_yield_rate ?? 15),
+    global_spend_limit_monthly: Number(profile?.global_spend_limit_monthly ?? 0),
   });
 
   useEffect(() => {
@@ -54,9 +55,11 @@ function SettingsPage() {
         biweekly_salary: Number(profile.biweekly_salary),
         salary_frequency: profile.salary_frequency,
         annual_yield_rate: Number(profile.annual_yield_rate),
+        global_spend_limit_monthly: Number(profile.global_spend_limit_monthly ?? 0),
       });
     }
   }, [profile]);
+
 
   const save = useMutation({
     mutationFn: async () => {
@@ -64,10 +67,15 @@ function SettingsPage() {
       if (!user.user) throw new Error("No auth");
       const { error } = await supabase
         .from("profiles")
-        .update(form)
+        .update({
+          ...form,
+          global_spend_limit_monthly:
+            form.global_spend_limit_monthly > 0 ? form.global_spend_limit_monthly : null,
+        })
         .eq("id", user.user.id);
       if (error) throw error;
     },
+
     onSuccess: () => {
       toast.success("Ajustes guardados");
       qc.invalidateQueries({ queryKey: ["profile"] });

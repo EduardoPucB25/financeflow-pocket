@@ -91,6 +91,7 @@ export type Database = {
       }
       debts: {
         Row: {
+          auto_apply_transactions: boolean
           created_at: string
           credit_limit: number | null
           current_balance: number
@@ -102,12 +103,17 @@ export type Database = {
           minimum_payment: number
           name: string
           notes: string | null
+          spend_limit_daily: number | null
+          spend_limit_monthly: number | null
+          spend_limit_weekly: number | null
+          statement_balance: number
           status: string
           target_payoff_date: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_apply_transactions?: boolean
           created_at?: string
           credit_limit?: number | null
           current_balance?: number
@@ -119,12 +125,17 @@ export type Database = {
           minimum_payment?: number
           name: string
           notes?: string | null
+          spend_limit_daily?: number | null
+          spend_limit_monthly?: number | null
+          spend_limit_weekly?: number | null
+          statement_balance?: number
           status?: string
           target_payoff_date?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_apply_transactions?: boolean
           created_at?: string
           credit_limit?: number | null
           current_balance?: number
@@ -136,6 +147,10 @@ export type Database = {
           minimum_payment?: number
           name?: string
           notes?: string | null
+          spend_limit_daily?: number | null
+          spend_limit_monthly?: number | null
+          spend_limit_weekly?: number | null
+          statement_balance?: number
           status?: string
           target_payoff_date?: string | null
           updated_at?: string
@@ -207,40 +222,67 @@ export type Database = {
       }
       pockets: {
         Row: {
+          accessibility: string
           color: string
           created_at: string
           current_balance: number
+          earns_yield: boolean
           id: string
           is_locked_savings: boolean
           name: string
+          purpose: string
           sort_order: number
+          spend_limit_daily: number | null
+          spend_limit_monthly: number | null
+          spend_limit_weekly: number | null
           target_percentage: number
           updated_at: string
           user_id: string
+          yield_base_balance: number | null
+          yield_rate: number | null
+          yield_start_date: string | null
         }
         Insert: {
+          accessibility?: string
           color?: string
           created_at?: string
           current_balance?: number
+          earns_yield?: boolean
           id?: string
           is_locked_savings?: boolean
           name: string
+          purpose?: string
           sort_order?: number
+          spend_limit_daily?: number | null
+          spend_limit_monthly?: number | null
+          spend_limit_weekly?: number | null
           target_percentage?: number
           updated_at?: string
           user_id: string
+          yield_base_balance?: number | null
+          yield_rate?: number | null
+          yield_start_date?: string | null
         }
         Update: {
+          accessibility?: string
           color?: string
           created_at?: string
           current_balance?: number
+          earns_yield?: boolean
           id?: string
           is_locked_savings?: boolean
           name?: string
+          purpose?: string
           sort_order?: number
+          spend_limit_daily?: number | null
+          spend_limit_monthly?: number | null
+          spend_limit_weekly?: number | null
           target_percentage?: number
           updated_at?: string
           user_id?: string
+          yield_base_balance?: number | null
+          yield_rate?: number | null
+          yield_start_date?: string | null
         }
         Relationships: []
       }
@@ -250,6 +292,7 @@ export type Database = {
           biweekly_salary: number
           created_at: string
           full_name: string | null
+          global_spend_limit_monthly: number | null
           id: string
           plan: string
           pro_expires_at: string | null
@@ -262,6 +305,7 @@ export type Database = {
           biweekly_salary?: number
           created_at?: string
           full_name?: string | null
+          global_spend_limit_monthly?: number | null
           id: string
           plan?: string
           pro_expires_at?: string | null
@@ -274,6 +318,7 @@ export type Database = {
           biweekly_salary?: number
           created_at?: string
           full_name?: string | null
+          global_spend_limit_monthly?: number | null
           id?: string
           plan?: string
           pro_expires_at?: string | null
@@ -504,6 +549,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_tx_effects: {
+        Args: {
+          _amount: number
+          _debt_id: string
+          _include: boolean
+          _kind: string
+          _pocket_id: string
+          _sign: number
+        }
+        Returns: undefined
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
