@@ -1,6 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery, subscriptionQuery } from "@/lib/queries";
+import {
+  profileQuery,
+  pocketsQuery,
+  debtsQuery,
+  flowsQuery,
+  transactionsQuery,
+  subscriptionQuery,
+} from "@/lib/queries";
 import { deriveSubStatus } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -29,7 +36,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Panel — Finance Flow Pocket" },
-      { name: "description", content: "Vista general de tus finanzas: patrimonio, bolsillos, deudas, transacciones y rendimiento." },
+      {
+        name: "description",
+        content: "Vista general de tus finanzas: patrimonio, bolsillos, deudas, transacciones y rendimiento.",
+      },
     ],
   }),
   loader: ({ context }) => {
@@ -89,11 +99,7 @@ function Dashboard() {
           yieldPockets.reduce(
             (s, p) =>
               s +
-              compoundDaily(
-                Number(p.yield_base_balance ?? p.current_balance),
-                Number(p.yield_rate ?? annualRate),
-                d,
-              ),
+              compoundDaily(Number(p.yield_base_balance ?? p.current_balance), Number(p.yield_rate ?? annualRate), d),
             0,
           ),
         ),
@@ -124,124 +130,172 @@ function Dashboard() {
   const upcomingFlows = flows.filter((f) => f.next_execution_date).slice(0, 5);
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6 bg-[#0B1120] min-h-screen text-slate-100">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Hola{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
-        <p className="text-muted-foreground text-sm">Tu panorama financiero de hoy</p>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+          Hola{profile?.full_name ? `, ${profile.full_name}` : ""}
+        </h1>
+        <p className="text-slate-400 text-sm font-medium mt-0.5">Tu panorama financiero de hoy</p>
       </div>
 
       {/* Hero stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard icon={Wallet} label="Balance total" value={money(totalBalance)} sub={`Líquido ${money(nw.liquid)}`} accent="text-primary" />
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <StatCard
+          icon={Wallet}
+          label="Balance total"
+          value={money(totalBalance)}
+          sub={`Líquido ${money(nw.liquid)}`}
+          accent="text-emerald-400"
+        />
         <StatCard
           icon={PiggyBank}
           label="Patrimonio neto"
           value={money(nw.net)}
           sub={`Deudas ${money(nw.liabilities)}`}
-          accent={nw.net >= 0 ? "text-primary" : "text-destructive"}
+          accent={nw.net >= 0 ? "text-emerald-400" : "text-rose-400"}
         />
         <StatCard
           icon={TrendingUp}
           label="Rendimiento acumulado"
           value={money(earnedTotal)}
           sub={yieldPockets.length === 0 ? "Sin bolsillos seleccionados" : `Sobre ${money(yieldBase)}`}
-          accent="text-accent"
+          accent="text-indigo-400"
         />
-        <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={money(salary)} accent="text-warning" />
+        <StatCard
+          icon={Calendar}
+          label="Próxima quincena"
+          value={`${paydayIn} días`}
+          sub={`Monto: ${money(salary)}`}
+          accent="text-amber-400"
+        />
       </div>
 
       {globalLimit > 0 && globalStatus.level !== "ok" && (
         <div
-          className={`rounded-md border px-4 py-3 text-sm flex items-start gap-3 ${
+          className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-3 shadow-md ${
             globalStatus.level === "over"
-              ? "border-destructive/40 bg-destructive/10"
-              : "border-warning/40 bg-warning/10"
+              ? "border-rose-500/40 bg-rose-950/30 text-rose-200"
+              : "border-amber-500/40 bg-amber-950/30 text-amber-200"
           }`}
         >
           <AlertTriangle
-            className={`h-4 w-4 mt-0.5 shrink-0 ${globalStatus.level === "over" ? "text-destructive" : "text-warning"}`}
+            className={`h-5 w-5 mt-0.5 shrink-0 ${globalStatus.level === "over" ? "text-rose-400" : "text-amber-400"}`}
           />
           <div>
-            <div className="font-medium">
+            <div className="font-semibold text-white">
               {globalStatus.level === "over"
                 ? "Superaste tu límite de gasto mensual"
                 : "Estás cerca de tu límite de gasto mensual"}
             </div>
-            <div className="text-muted-foreground">
-              Llevas {money(globalStatus.spent)} de {money(globalStatus.limit)} ({Math.round(globalStatus.ratio * 100)}%).
+            <div className="text-slate-300 text-xs mt-0.5">
+              Llevas {money(globalStatus.spent)} de {money(globalStatus.limit)} ({Math.round(globalStatus.ratio * 100)}
+              %).
             </div>
           </div>
         </div>
       )}
 
       {!isPro && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-start gap-3">
-            <div className="mt-1 rounded-full bg-primary/20 p-2 text-primary">
-              <Crown className="h-4 w-4" />
+            <div className="mt-0.5 rounded-full bg-emerald-500/20 p-2 text-emerald-400 shrink-0">
+              <Crown className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-semibold">Desbloquea funciones Pro</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="font-bold text-white text-base">Desbloquea funciones Pro</p>
+              <p className="text-xs text-slate-300 mt-0.5">
                 Bolsillos ilimitados, detección automática de notificaciones bancarias y simulador avanzado.
               </p>
             </div>
           </div>
-          <Button asChild size="sm" className="shrink-0">
+          <Button asChild size="sm" className="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold">
             <Link to="/upgrade">
-              <Zap className="h-4 w-4 mr-1" /> Ver planes Pro
+              <Zap className="h-4 w-4 mr-1.5 fill-current" /> Ver planes Pro
             </Link>
           </Button>
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Allocation */}
-        <Card className="p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
+        {/* Allocation Card */}
+        <Card className="p-5 lg:col-span-2 bg-slate-900/80 border-slate-800/80 shadow-lg">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
             <div>
-              <h2 className="font-semibold">Distribución por bolsillos</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="font-bold text-slate-100 text-base">Distribución por bolsillos</h2>
+              <p className="text-xs text-slate-400 font-medium">
                 Total {pct(totalPct)} asignado {totalPct !== 100 && "· ajusta a 100%"}
               </p>
             </div>
-            <Link to="/pockets" className="text-xs text-primary hover:underline">Gestionar</Link>
+            <Link
+              to="/pockets"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Gestionar →
+            </Link>
           </div>
+
           {pockets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Cargando bolsillos por defecto…</p>
+            <p className="text-sm text-slate-400 py-6 text-center">Cargando bolsillos por defecto…</p>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6 items-center">
-              <div className="h-56">
+            <div className="grid md:grid-cols-12 gap-6 items-center">
+              {/* Pie Chart Container */}
+              <div className="md:col-span-5 h-60 relative flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pockets} dataKey="target_percentage" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+                    <Pie
+                      data={pockets}
+                      dataKey="target_percentage"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={3}
+                      stroke="#0F172A"
+                      strokeWidth={2}
+                    >
                       {pockets.map((p) => (
                         <Cell key={p.id} fill={p.color} />
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                      formatter={(v: number) => `${v}%`}
+                      contentStyle={{
+                        backgroundColor: "rgba(15, 23, 42, 0.95)",
+                        borderColor: "rgba(255, 255, 255, 0.15)",
+                        borderRadius: "0.5rem",
+                        color: "#F8FAFC",
+                        fontSize: "12px",
+                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
+                      }}
+                      itemStyle={{ color: "#F8FAFC", fontWeight: "600" }}
+                      formatter={(v: number) => [`${v}%`, "Asignación"]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="space-y-2">
+
+              {/* Pocket Legend Items (Sin solapamientos) */}
+              <div className="md:col-span-7 space-y-2.5 max-h-64 overflow-y-auto pr-1">
                 {pockets.map((p) => (
-                  <div key={p.id} className="text-sm">
-                    <div className="flex items-center justify-between">
+                  <div
+                    key={p.id}
+                    className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/80 hover:border-slate-700/80 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: p.color }} />
-                        <span className="truncate">{p.name}</span>
+                        <span className="h-3 w-3 rounded-full shrink-0 shadow-sm" style={{ background: p.color }} />
+                        <span className="font-semibold text-slate-100 text-xs sm:text-sm truncate">{p.name}</span>
                         {!isAccessible(p) && (
-                          <span className="text-[10px] border border-border rounded px-1 text-muted-foreground shrink-0">
+                          <span className="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 shrink-0">
                             no disponible
                           </span>
                         )}
                       </div>
-                      <span className="text-muted-foreground whitespace-nowrap">
-                        {money(p.current_balance as number)} · {money((salary * Number(p.target_percentage)) / 100)}/qna
+                      <span className="text-xs font-bold text-emerald-400 shrink-0">
+                        {money((salary * Number(p.target_percentage)) / 100)}/qna
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-400 pl-5">
+                      <span>Saldo actual:</span>
+                      <span className="font-medium text-slate-200">{money(p.current_balance as number)}</span>
                     </div>
                   </div>
                 ))}
@@ -250,63 +304,105 @@ function Dashboard() {
           )}
         </Card>
 
-        {/* Yield projection with pocket selector */}
-        <Card className="p-5">
-          <div className="mb-4">
-            <h2 className="font-semibold">Rendimiento compuesto</h2>
-            <p className="text-xs text-muted-foreground">
-              Solo los bolsillos seleccionados · valor actual {money(accruedTotal)}
-            </p>
+        {/* Yield Projection Card */}
+        <Card className="p-5 bg-slate-900/80 border-slate-800/80 shadow-lg flex flex-col justify-between">
+          <div>
+            <div className="mb-4 pb-2 border-b border-slate-800">
+              <h2 className="font-bold text-slate-100 text-base">Rendimiento compuesto</h2>
+              <p className="text-xs text-slate-400 font-medium">
+                Solo bolsillos activos · Valor actual:{" "}
+                <span className="text-emerald-400 font-bold">{money(accruedTotal)}</span>
+              </p>
+            </div>
+
+            {/* Chart with Bright Axes */}
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={projectionData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                  <XAxis
+                    dataKey="day"
+                    stroke="#94A3B8"
+                    tick={{ fill: "#CBD5E1", fontSize: 12, fontWeight: 500 }}
+                    axisLine={{ stroke: "#334155" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke="#94A3B8"
+                    tick={{ fill: "#CBD5E1", fontSize: 11, fontWeight: 500 }}
+                    axisLine={{ stroke: "#334155" }}
+                    tickLine={false}
+                    width={50}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(15, 23, 42, 0.95)",
+                      borderColor: "rgba(255, 255, 255, 0.15)",
+                      borderRadius: "0.5rem",
+                      color: "#F8FAFC",
+                      fontSize: "12px",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
+                    }}
+                    itemStyle={{ color: "#10B981", fontWeight: "700" }}
+                    formatter={(v: number) => [money(v), "Proyección"]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="#10B981"
+                    strokeWidth={2.5}
+                    dot={{ fill: "#10B981", r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={projectionData}>
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} width={70} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                  formatter={(v: number) => money(v)}
-                />
-                <Line type="monotone" dataKey="balance" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 space-y-2 border-t border-border pt-3">
-            <div className="text-xs font-medium">¿Qué bolsillos generan rendimiento?</div>
-            {pockets.map((p) => (
-              <div key={p.id} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="h-2 w-2 rounded-full shrink-0" style={{ background: p.color }} />
-                  <span className="truncate">{p.name}</span>
-                </span>
-                <Switch
-                  checked={p.earns_yield}
-                  onCheckedChange={(on) =>
-                    toggleYield.mutate({ id: p.id, on, balance: Number(p.current_balance) })
-                  }
-                />
-              </div>
-            ))}
-            <p className="text-[11px] text-muted-foreground pt-1">{YIELD_DISCLAIMER}</p>
+
+          <div className="mt-4 space-y-2 border-t border-slate-800 pt-3">
+            <div className="text-xs font-semibold text-slate-200">¿Qué bolsillos generan rendimiento?</div>
+            <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1">
+              {pockets.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-slate-800/40"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: p.color }} />
+                    <span className="truncate text-slate-200 font-medium">{p.name}</span>
+                  </span>
+                  <Switch
+                    checked={p.earns_yield}
+                    onCheckedChange={(on) => toggleYield.mutate({ id: p.id, on, balance: Number(p.current_balance) })}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 pt-1 leading-tight">{YIELD_DISCLAIMER}</p>
           </div>
         </Card>
       </div>
 
-      {/* Debts + transactions + flows */}
+      {/* Debts + Transactions + Flows Section */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
+        {/* Cards & Debts */}
+        <Card className="p-5 bg-slate-900/80 border-slate-800/80 shadow-lg">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
             <div>
-              <h2 className="font-semibold">Tarjetas · corte y pago</h2>
-              <p className="text-xs text-muted-foreground">
-                Deuda total: <span className="text-destructive">{money(nw.liabilities)}</span> · disponible{" "}
-                <span className="text-accent">{money(invisibleCash)}</span>
+              <h2 className="font-bold text-slate-100 text-base">Tarjetas · corte y pago</h2>
+              <p className="text-xs text-slate-400 font-medium">
+                Deuda: <span className="text-rose-400 font-bold">{money(nw.liabilities)}</span> · Disp.{" "}
+                <span className="text-emerald-400 font-bold">{money(invisibleCash)}</span>
               </p>
             </div>
-            <Link to="/debts" className="text-xs text-primary hover:underline">Ver todas</Link>
+            <Link
+              to="/debts"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Ver todas →
+            </Link>
           </div>
           {debts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aún no has agregado deudas.</p>
+            <p className="text-sm text-slate-400 py-4">Aún no has agregado deudas.</p>
           ) : (
             <div className="space-y-4">
               {cards.slice(0, 3).map((c) => {
@@ -316,51 +412,70 @@ function Dashboard() {
                 const limit = Number(c.credit_limit ?? 0);
                 const used = limit > 0 ? Math.min(100, Math.round((Number(c.current_balance) / limit) * 100)) : 0;
                 return (
-                  <div key={c.id} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium truncate">{c.name}</span>
-                      <span className="text-muted-foreground">{money(c.current_balance as number)}</span>
+                  <div key={c.id} className="space-y-1.5 p-2 rounded-lg bg-slate-950/40 border border-slate-800/50">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
+                      <span className="font-semibold text-slate-100 truncate">{c.name}</span>
+                      <span className="text-rose-400 font-bold">{money(c.current_balance as number)}</span>
                     </div>
-                    <Progress value={used} />
-                    <div className="text-xs text-muted-foreground">
-                      Corte {formatDateEs(cycle.cutoff)} ({cycle.daysToCutoff}d) · Pago {formatDateEs(cycle.due)} ({cycle.daysToDue}d)
+                    <Progress value={used} className="h-1.5 bg-slate-800" />
+                    <div className="flex items-center justify-between text-[11px] text-slate-300 font-medium pt-0.5">
+                      <span>
+                        Corte {formatDateEs(cycle.cutoff)} ({cycle.daysToCutoff}d)
+                      </span>
+                      <span className="text-amber-300 font-semibold">
+                        Pago {formatDateEs(cycle.due)} ({cycle.daysToDue}d)
+                      </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[11px] text-slate-400">
                       {limit > 0
                         ? `Disponible: ${money(Math.max(0, limit - Number(c.current_balance)))}`
-                        : "Define el límite de crédito para ver el disponible"}
+                        : "Define el límite para ver el disponible"}
                     </div>
                   </div>
                 );
               })}
-              {debts.filter((d) => d.debt_type !== "card").slice(0, 3).map((d) => (
-                <div key={d.id} className="flex items-center justify-between text-sm">
-                  <span className="font-medium truncate">{d.name}</span>
-                  <span className="text-destructive">{money(d.current_balance as number)}</span>
-                </div>
-              ))}
+              {debts
+                .filter((d) => d.debt_type !== "card")
+                .slice(0, 3)
+                .map((d) => (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between text-xs sm:text-sm p-2 rounded bg-slate-950/30"
+                  >
+                    <span className="font-medium text-slate-200 truncate">{d.name}</span>
+                    <span className="text-rose-400 font-bold">{money(d.current_balance as number)}</span>
+                  </div>
+                ))}
             </div>
           )}
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold flex items-center gap-2"><Receipt className="h-4 w-4" /> Recientes</h2>
-            <Link to="/transactions" className="text-xs text-primary hover:underline">Ver todas</Link>
+        {/* Recent Transactions */}
+        <Card className="p-5 bg-slate-900/80 border-slate-800/80 shadow-lg">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+            <h2 className="font-bold text-slate-100 text-base flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-emerald-400" /> Recientes
+            </h2>
+            <Link
+              to="/transactions"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Ver todas →
+            </Link>
           </div>
           {recentTx.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin transacciones registradas.</p>
+            <p className="text-sm text-slate-400 py-4">Sin transacciones registradas.</p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-slate-800/80">
               {recentTx.map((t) => (
-                <li key={t.id} className="py-2 flex items-center justify-between text-sm">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{t.description || t.kind}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(t.occurred_at).toLocaleDateString("es-MX")}
+                <li key={t.id} className="py-2.5 flex items-center justify-between text-xs sm:text-sm">
+                  <div className="min-w-0 pr-2">
+                    <div className="font-semibold text-slate-200 truncate">{t.description || t.kind}</div>
+                    <div className="text-[11px] text-slate-400">
+                      {new Date(t.occurred_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
                     </div>
                   </div>
-                  <span className={t.kind === "income" ? "text-primary" : "text-destructive"}>
+                  <span className={`font-bold shrink-0 ${t.kind === "income" ? "text-emerald-400" : "text-rose-400"}`}>
                     {t.kind === "income" ? "+" : "−"}
                     {money(t.amount)}
                   </span>
@@ -370,24 +485,32 @@ function Dashboard() {
           )}
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Próximos flujos</h2>
-            <Link to="/flows" className="text-xs text-primary hover:underline">Gestionar</Link>
+        {/* Upcoming Flows */}
+        <Card className="p-5 bg-slate-900/80 border-slate-800/80 shadow-lg">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+            <h2 className="font-bold text-slate-100 text-base">Próximos flujos</h2>
+            <Link
+              to="/flows"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Gestionar →
+            </Link>
           </div>
           {upcomingFlows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin flujos programados.</p>
+            <p className="text-sm text-slate-400 py-4">Sin flujos programados.</p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-slate-800/80">
               {upcomingFlows.map((f) => (
-                <li key={f.id} className="py-2 flex items-center justify-between text-sm">
-                  <div>
-                    <div className="font-medium">{f.title}</div>
-                    <div className="text-xs text-muted-foreground">
+                <li key={f.id} className="py-2.5 flex items-center justify-between text-xs sm:text-sm">
+                  <div className="pr-2 min-w-0">
+                    <div className="font-semibold text-slate-200 truncate">{f.title}</div>
+                    <div className="text-[11px] text-slate-400">
                       {f.next_execution_date} · {f.frequency}
                     </div>
                   </div>
-                  <span className={f.flow_type === "deposit" ? "text-primary" : "text-destructive"}>
+                  <span
+                    className={`font-bold shrink-0 ${f.flow_type === "deposit" ? "text-emerald-400" : "text-rose-400"}`}
+                  >
                     {f.flow_type === "deposit" ? "+" : "−"}
                     {money(f.amount)}
                   </span>
@@ -415,13 +538,13 @@ function StatCard({
   accent?: string;
 }) {
   return (
-    <Card className="p-4">
+    <Card className="p-4 bg-slate-900/80 border-slate-800/80 shadow-lg">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <Icon className={`h-4 w-4 ${accent ?? "text-muted-foreground"}`} />
+        <span className="text-xs font-semibold text-slate-300">{label}</span>
+        <Icon className={`h-4 w-4 ${accent ?? "text-slate-400"}`} />
       </div>
-      <div className="mt-2 text-xl md:text-2xl font-bold">{value}</div>
-      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+      <div className="mt-2 text-xl md:text-2xl font-black text-white tracking-tight">{value}</div>
+      {sub && <div className="text-xs font-medium text-slate-400 mt-1">{sub}</div>}
     </Card>
   );
 }
