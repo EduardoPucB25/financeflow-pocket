@@ -21,7 +21,9 @@ import {
   Menu,
   Inbox,
   Crown,
+  PiggyBank,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -38,6 +40,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const NAV = [
   { to: "/dashboard", label: "Panel", icon: LayoutDashboard },
+  { to: "/networth", label: "Patrimonio", icon: PiggyBank },
   { to: "/pockets", label: "Bolsillos", icon: Wallet },
   { to: "/debts", label: "Deudas", icon: CreditCard },
   { to: "/transactions", label: "Movimientos", icon: Receipt },
@@ -47,6 +50,7 @@ const NAV = [
   { to: "/upgrade", label: "Upgrade", icon: Crown },
   { to: "/settings", label: "Ajustes", icon: Settings },
 ] as const;
+
 
 function AuthedLayout() {
   const { user } = Route.useRouteContext();

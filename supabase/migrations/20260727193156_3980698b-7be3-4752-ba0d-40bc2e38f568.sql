@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.tx_balance_sync() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.apply_tx_effects(text, numeric, uuid, uuid, boolean, numeric) FROM PUBLIC, anon, authenticated;

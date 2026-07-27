@@ -23,6 +23,7 @@ import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authent
 import { Route as AuthenticatedSimulatorRouteImport } from './routes/_authenticated/simulator'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedPocketsRouteImport } from './routes/_authenticated/pockets'
+import { Route as AuthenticatedNetworthRouteImport } from './routes/_authenticated/networth'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedFlowsRouteImport } from './routes/_authenticated/flows'
 import { Route as AuthenticatedDebtsRouteImport } from './routes/_authenticated/debts'
@@ -100,6 +101,11 @@ const AuthenticatedPocketsRoute = AuthenticatedPocketsRouteImport.update({
   path: '/pockets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNetworthRoute = AuthenticatedNetworthRouteImport.update({
+  id: '/networth',
+  path: '/networth',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/debts': typeof AuthenticatedDebtsRoute
   '/flows': typeof AuthenticatedFlowsRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/networth': typeof AuthenticatedNetworthRoute
   '/pockets': typeof AuthenticatedPocketsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/simulator': typeof AuthenticatedSimulatorRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/debts': typeof AuthenticatedDebtsRoute
   '/flows': typeof AuthenticatedFlowsRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/networth': typeof AuthenticatedNetworthRoute
   '/pockets': typeof AuthenticatedPocketsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/simulator': typeof AuthenticatedSimulatorRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_authenticated/debts': typeof AuthenticatedDebtsRoute
   '/_authenticated/flows': typeof AuthenticatedFlowsRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/networth': typeof AuthenticatedNetworthRoute
   '/_authenticated/pockets': typeof AuthenticatedPocketsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/simulator': typeof AuthenticatedSimulatorRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/debts'
     | '/flows'
     | '/inbox'
+    | '/networth'
     | '/pockets'
     | '/settings'
     | '/simulator'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/debts'
     | '/flows'
     | '/inbox'
+    | '/networth'
     | '/pockets'
     | '/settings'
     | '/simulator'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/_authenticated/debts'
     | '/_authenticated/flows'
     | '/_authenticated/inbox'
+    | '/_authenticated/networth'
     | '/_authenticated/pockets'
     | '/_authenticated/settings'
     | '/_authenticated/simulator'
@@ -378,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPocketsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/networth': {
+      id: '/_authenticated/networth'
+      path: '/networth'
+      fullPath: '/networth'
+      preLoaderRoute: typeof AuthenticatedNetworthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -428,6 +447,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDebtsRoute: typeof AuthenticatedDebtsRoute
   AuthenticatedFlowsRoute: typeof AuthenticatedFlowsRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedNetworthRoute: typeof AuthenticatedNetworthRoute
   AuthenticatedPocketsRoute: typeof AuthenticatedPocketsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSimulatorRoute: typeof AuthenticatedSimulatorRoute
@@ -441,6 +461,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDebtsRoute: AuthenticatedDebtsRoute,
   AuthenticatedFlowsRoute: AuthenticatedFlowsRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedNetworthRoute: AuthenticatedNetworthRoute,
   AuthenticatedPocketsRoute: AuthenticatedPocketsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSimulatorRoute: AuthenticatedSimulatorRoute,
@@ -467,13 +488,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
