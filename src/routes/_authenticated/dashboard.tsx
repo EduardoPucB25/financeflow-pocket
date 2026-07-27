@@ -151,9 +151,9 @@ function Dashboard() {
         <StatCard
           icon={PiggyBank}
           label="Patrimonio neto"
-          value={money(nw.netWorth)}
+          value={money(nw.net)}
           sub={`Activos ${money(nw.assets)} · Pasivos ${money(nw.liabilities)}`}
-          accent={nw.netWorth >= 0 ? "text-primary" : "text-destructive"}
+          accent={nw.net >= 0 ? "text-primary" : "text-destructive"}
         />
         <StatCard icon={CreditCard} label="Crédito disponible" value={money(invisibleCash)} sub={`${cards.length} tarjetas`} />
         <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={salary > 0 ? money(salary) : undefined} />
