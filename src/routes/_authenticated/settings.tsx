@@ -24,6 +24,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
+import { UpdateCard } from "@/components/UpdateCard";
 import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown, Download, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -40,12 +41,24 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const { data: profile } = useSuspenseQuery(profileQuery());
   const qc = useQueryClient();
+  // `payday_*` ships in migration 20260728100000 but isn't in the generated
+  // Supabase types yet — cast locally until types.ts regenerates.
+  const paydayOf = (p: unknown) => {
+    const row = p as { payday_days?: number[] | null; payday_offset_days?: number | null; payday_weekend_to_friday?: boolean | null } | null;
+    return {
+      payday_day_1: row?.payday_days?.[0] ?? 15,
+      payday_day_2: row?.payday_days?.[1] ?? 31,
+      payday_offset_days: Number(row?.payday_offset_days ?? 0),
+      payday_weekend_to_friday: Boolean(row?.payday_weekend_to_friday ?? false),
+    };
+  };
   const [form, setForm] = useState({
     full_name: profile?.full_name ?? "",
     biweekly_salary: Number(profile?.biweekly_salary ?? 5600),
     salary_frequency: profile?.salary_frequency ?? "biweekly",
     annual_yield_rate: Number(profile?.annual_yield_rate ?? 15),
     global_spend_limit_monthly: Number(profile?.global_spend_limit_monthly ?? 0),
+    ...paydayOf(profile),
   });
 
   useEffect(() => {
@@ -56,8 +69,10 @@ function SettingsPage() {
         salary_frequency: profile.salary_frequency,
         annual_yield_rate: Number(profile.annual_yield_rate),
         global_spend_limit_monthly: Number(profile.global_spend_limit_monthly ?? 0),
+        ...paydayOf(profile),
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
 
@@ -65,10 +80,20 @@ function SettingsPage() {
     mutationFn: async () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("No auth");
-      const { error } = await supabase
-        .from("profiles")
+      // payday_day_1/2 are UI-only scalars: assemble the array column and
+      // never spread them into the update payload (PostgREST rejects unknown
+      // columns for the whole update).
+      const { payday_day_1, payday_day_2, ...rest } = form;
+      const payday_days =
+        form.salary_frequency === "biweekly"
+          ? [payday_day_1, payday_day_2]
+          : form.salary_frequency === "monthly"
+            ? [payday_day_1]
+            : null;
+      const { error } = await (supabase.from("profiles") as any)
         .update({
-          ...form,
+          ...rest,
+          payday_days,
           global_spend_limit_monthly:
             form.global_spend_limit_monthly > 0 ? form.global_spend_limit_monthly : null,
         })
@@ -130,6 +155,77 @@ function SettingsPage() {
           </div>
         </div>
 
+        <div className="space-y-4 border-t border-border pt-4">
+          <div>
+            <h3 className="font-medium">Días de pago</h3>
+            <p className="text-xs text-muted-foreground">
+              Configura cuándo te pagan para que el contador de "Próximo pago" sea exacto.
+            </p>
+          </div>
+          {form.salary_frequency !== "weekly" ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{form.salary_frequency === "biweekly" ? "Primer día de pago" : "Día de pago"}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={form.payday_day_1}
+                  onChange={(e) =>
+                    setForm({ ...form, payday_day_1: Math.min(31, Math.max(1, Number(e.target.value) || 1)) })
+                  }
+                />
+              </div>
+              {form.salary_frequency === "biweekly" && (
+                <div className="space-y-2">
+                  <Label>Segundo día de pago</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={form.payday_day_2}
+                    onChange={(e) =>
+                      setForm({ ...form, payday_day_2: Math.min(31, Math.max(1, Number(e.target.value) || 1)) })
+                    }
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Días antes</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={5}
+                  value={form.payday_offset_days}
+                  onChange={(e) =>
+                    setForm({ ...form, payday_offset_days: Math.min(5, Math.max(0, Number(e.target.value) || 0)) })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ej. 1 si te depositan un día antes del corte (el 30 en meses de 31 días).
+                </p>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="payday-weekend">Si cae en fin de semana, mover al viernes previo</Label>
+                  <Switch
+                    id="payday-weekend"
+                    checked={form.payday_weekend_to_friday}
+                    onCheckedChange={(v) => setForm({ ...form, payday_weekend_to_friday: v })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Usa 31 como día para "fin de mes"; se ajusta solo en meses cortos (ej. febrero).
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Con frecuencia semanal, el contador usa el esquema quincenal estándar (día 15 y fin de mes) por ahora.
+            </p>
+          )}
+        </div>
+
         <Button onClick={() => save.mutate()} disabled={save.isPending}>
           Guardar cambios
         </Button>
@@ -139,6 +235,7 @@ function SettingsPage() {
       <SubscriptionCard />
       <BillingHistoryCard />
       <AndroidDetectionCard />
+      <UpdateCard />
     </div>
   );
 }

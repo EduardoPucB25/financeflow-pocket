@@ -5,7 +5,6 @@ import { deriveSubStatus } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { money, pct } from "@/lib/format";
 import {
@@ -13,16 +12,18 @@ import {
   accruedYield,
   nextCutoffAndDue,
   formatDateEs,
-  daysUntilPayday,
+  nextPayday,
+  DEFAULT_PAYDAY_RULE,
+  type PaydayRule,
   periodSpend,
   limitStatus,
   YIELD_DISCLAIMER,
   type SpendTx,
 } from "@/lib/finance";
 import { netWorth, isAccessible, type PocketLike, type DebtLike } from "@/lib/netWorth";
-import { PieChart, Pie, Cell, ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useMemo } from "react";
-import { TrendingUp, CreditCard, Wallet, Calendar, Receipt, Crown, Zap, PiggyBank, AlertTriangle } from "lucide-react";
+import { TrendingUp, Wallet, Calendar, Receipt, Crown, Zap, PiggyBank, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,14 @@ const ACCENT_CHIP: Record<string, string> = {
   "text-warning": "bg-warning/10",
 };
 
+// Left accent rail per StatCard, same literal-map rationale as ACCENT_CHIP.
+const ACCENT_RAIL: Record<string, string> = {
+  "text-primary": "bg-primary",
+  "text-destructive": "bg-destructive",
+  "text-accent": "bg-accent",
+  "text-warning": "bg-warning",
+};
+
 function Dashboard() {
   const { data: profile } = useSuspenseQuery(profileQuery());
   const { data: pocketsData } = useSuspenseQuery(pocketsQuery());
@@ -86,7 +95,19 @@ function Dashboard() {
     0,
   );
   const salary = Number(profile?.biweekly_salary ?? 0);
-  const paydayIn = daysUntilPayday([15, 30]);
+  // `payday_*` ships in migration 20260728100000 but isn't in the generated
+  // Supabase types yet — cast locally until types.ts regenerates.
+  const profileRow = profile as {
+    payday_days?: number[] | null;
+    payday_offset_days?: number | null;
+    payday_weekend_to_friday?: boolean | null;
+  } | null;
+  const paydayRule: PaydayRule = {
+    days: profileRow?.payday_days ?? DEFAULT_PAYDAY_RULE.days,
+    offsetDays: Number(profileRow?.payday_offset_days ?? 0),
+    weekendToFriday: Boolean(profileRow?.payday_weekend_to_friday ?? false),
+  };
+  const payday = nextPayday(paydayRule);
   const recentTx = transactions.slice(0, 5);
 
   const yieldPockets = pockets.filter((p) => p.earns_yield);
@@ -149,26 +170,46 @@ function Dashboard() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Hola{profile?.full_name ? `, ${profile.full_name}` : ""}
-        </h1>
-        <p className="text-sm text-muted-foreground">Tu panorama financiero de hoy</p>
+    <div className="p-4 md:p-8 space-y-6 bg-[radial-gradient(900px_400px_at_15%_-10%,rgba(16,185,129,0.08),transparent_60%),radial-gradient(700px_380px_at_100%_0%,rgba(139,92,246,0.08),transparent_55%)]">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Hola{profile?.full_name ? `, ${profile.full_name}` : ""}
+          </h1>
+          <p className="text-sm text-muted-foreground">Tu panorama financiero de hoy</p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground/80">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
+          {payday.daysUntil === 0
+            ? "Hoy es día de pago"
+            : `Próximo pago en ${payday.daysUntil} ${payday.daysUntil === 1 ? "día" : "días"}`}
+        </span>
       </div>
 
       {/* Hero stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Wallet} label="Balance en bolsillos" value={money(totalBalance)} sub={`${pockets.length} bolsillos`} accent="text-primary" />
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Wallet} label="Balance total" value={money(totalBalance)} sub={`Líquido ${money(nw.liquid)}`} accent="text-primary" />
         <StatCard
           icon={PiggyBank}
           label="Patrimonio neto"
           value={money(nw.net)}
-          sub={`Activos ${money(nw.assets)} · Pasivos ${money(nw.liabilities)}`}
+          sub={`Deudas ${money(nw.liabilities)}`}
           accent={nw.net >= 0 ? "text-primary" : "text-destructive"}
         />
-        <StatCard icon={CreditCard} label="Crédito disponible" value={money(invisibleCash)} sub={`${cards.length} tarjetas`} accent="text-accent" />
-        <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={salary > 0 ? money(salary) : undefined} accent="text-warning" />
+        <StatCard
+          icon={TrendingUp}
+          label="Rendimiento acumulado"
+          value={money(Math.max(0, earnedTotal))}
+          sub={`Sobre ${money(accruedTotal)} generando`}
+          accent="text-accent"
+        />
+        <StatCard
+          icon={Calendar}
+          label="Próximo pago"
+          value={payday.daysUntil === 0 ? "Hoy" : `${payday.daysUntil} ${payday.daysUntil === 1 ? "día" : "días"}`}
+          sub={`${formatDateEs(payday.date)}${salary > 0 ? ` · ${money(salary)}` : ""}`}
+          accent="text-warning"
+        />
       </div>
 
       {globalLimit > 0 && globalStatus.level !== "ok" && (
@@ -227,36 +268,43 @@ function Dashboard() {
             <p className="text-sm text-muted-foreground">Cargando bolsillos por defecto…</p>
           ) : (
             <div className="space-y-4">
-              <div className="h-52">
+              <div className="relative h-52">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={2} stroke="none">
                       {pockets.map((p, i) => (
                         <Cell key={i} fill={p.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => `${v}%`} />
+                    <Tooltip
+                      formatter={(v: number) => `${v}%`}
+                      contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">En bolsillos</span>
+                  <span className="text-lg font-bold tracking-tight">{money(totalBalance)}</span>
+                </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {pockets.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: p.color }}
-                      />
-                      <span>{p.name}</span>
+                  <div key={p.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-secondary/50">
+                    <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: p.color }} />
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium text-foreground/90">{p.name}</span>
                       {!isAccessible(p) && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                          no disponible
+                        <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          bloqueado
                         </span>
                       )}
-                    </div>
-                    <span className="text-muted-foreground">
-                      {money(p.current_balance as number)} · {money((salary * Number(p.target_percentage)) / 100)}/qna
+                    </span>
+                    <span className="text-right">
+                      <span className="font-semibold">{money(p.current_balance as number)}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {Number(p.target_percentage)}% · {money((salary * Number(p.target_percentage)) / 100)}/qna
+                      </span>
                     </span>
                   </div>
                 ))}
@@ -284,6 +332,7 @@ function Dashboard() {
                     <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
+                <CartesianGrid stroke="var(--color-border)" vertical={false} />
                 <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={12} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickFormatter={formatKTick} />
                 <Tooltip
@@ -291,7 +340,27 @@ function Dashboard() {
                   contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}
                 />
                 <Area type="monotone" dataKey="balance" stroke="none" fill="url(#dashboardYieldFill)" />
-                <Line type="monotone" dataKey="balance" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="balance"
+                  stroke="var(--color-primary)"
+                  strokeWidth={2.5}
+                  dot={(props: { cx?: number; cy?: number; index?: number }) =>
+                    props.index === projectionData.length - 1 ? (
+                      <circle
+                        key={`end-${props.index}`}
+                        cx={props.cx}
+                        cy={props.cy}
+                        r={4.5}
+                        fill="var(--color-primary)"
+                        stroke="var(--color-card)"
+                        strokeWidth={2.5}
+                      />
+                    ) : (
+                      <g key={`d-${props.index}`} />
+                    )
+                  }
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -346,11 +415,19 @@ function Dashboard() {
                   <div key={c.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{c.name}</span>
-                      <span>{money(c.current_balance as number)}</span>
+                      <span className="font-semibold">{money(c.current_balance as number)}</span>
                     </div>
-                    <Progress value={used} />
+                    <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          used >= 80 ? "bg-destructive" : used >= 50 ? "bg-warning" : "bg-primary",
+                        )}
+                        style={{ width: `${used}%` }}
+                      />
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Corte {formatDateEs(cycle.cutoff)} ({cycle.daysToCutoff}d) · Pago {formatDateEs(cycle.due)} ({cycle.daysToDue}d)
+                      Corte {formatDateEs(cycle.cutoff)} ({cycle.daysToCutoff}d) · Pago {formatDateEs(cycle.due)} ({cycle.daysToDue}d) · {used}% usado
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {limit > 0
@@ -453,14 +530,20 @@ function StatCard({
   accent?: string;
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <div className={cn("rounded-lg p-2", accent ? (ACCENT_CHIP[accent] ?? "bg-muted/50") : "bg-muted/50")}>
+    <Card className="relative overflow-hidden p-4">
+      <span
+        className={cn(
+          "absolute inset-y-0 left-0 w-[3px]",
+          accent ? (ACCENT_RAIL[accent] ?? "bg-muted") : "bg-muted",
+        )}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
+        <div className={cn("shrink-0 rounded-lg p-2", accent ? (ACCENT_CHIP[accent] ?? "bg-muted/50") : "bg-muted/50")}>
           <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
         </div>
       </div>
-      <p className={`mt-2 text-xl font-semibold ${accent ?? ""}`}>{value}</p>
+      <p className={`mt-2 text-lg font-bold tracking-tight sm:text-xl ${accent ?? ""}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
     </Card>
   );

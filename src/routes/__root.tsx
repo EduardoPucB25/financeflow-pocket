@@ -18,6 +18,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { NativeSplash } from "@/components/NativeSplash";
+import { isNativeApp } from "@/lib/native/platform";
 
 function NotFoundComponent() {
   return (
@@ -55,6 +56,26 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           No pudimos cargar esta página. Puedes intentar de nuevo o volver al inicio.
         </p>
+        {error.message && (
+          <p className="mt-2 break-words font-mono text-xs text-muted-foreground/70">
+            {error.message}
+          </p>
+        )}
+        {isNativeApp() && (
+          <>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Si el problema continúa, puede que necesites actualizar la app.
+            </p>
+            <button
+              onClick={() =>
+                window.open(`${window.location.origin}/downloads/finance-flow-pocket.apk`, "_blank")
+              }
+              className="mt-1 text-xs text-primary underline"
+            >
+              Descargar la última versión (APK)
+            </button>
+          </>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {

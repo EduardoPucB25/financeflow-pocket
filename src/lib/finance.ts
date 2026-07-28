@@ -100,19 +100,54 @@ export function graceInfo(cutoffDay: number, dueDay: number, today = new Date())
   return { cutoff, due, daysToCutoff, daysToDue, maxFloat };
 }
 
-/** Days until the next payday given day-of-month schedule. */
-export function daysUntilPayday(days: number[], today = new Date()): number {
-  const y = today.getFullYear();
-  const m = today.getMonth();
-  const d = today.getDate();
-  const upcoming: Date[] = [];
-  for (const day of days) {
-    const thisMonth = new Date(y, m, day);
-    const nextMonth = new Date(y, m + 1, day);
-    upcoming.push(day >= d ? thisMonth : nextMonth);
+// ---------------------------------------------------------------------------
+// Payday schedule with user-configurable rules.
+// ---------------------------------------------------------------------------
+
+export interface PaydayRule {
+  /** Day-of-month anchors; 31 means "fin de mes" (clamped in short months). */
+  days: number[];
+  /** Pay N days BEFORE each anchor (0-5). */
+  offsetDays: number;
+  /** If the computed date lands on Sat/Sun, move back to the previous Friday. */
+  weekendToFriday: boolean;
+}
+
+export const DEFAULT_PAYDAY_RULE: PaydayRule = {
+  days: [15, 31],
+  offsetDays: 0,
+  weekendToFriday: false,
+};
+
+export interface NextPayday {
+  date: Date;
+  daysUntil: number;
+}
+
+/**
+ * Next payday under the given rule. Scans anchors over this month and the
+ * next two (worst-case backward shift is offset 5 + weekend 2 = 7 days, so a
+ * candidate >= today always exists in that window).
+ */
+export function nextPayday(rule: PaydayRule, today = new Date()): NextPayday {
+  const t = startOfDay(today);
+  const days = rule.days.length > 0 ? rule.days : DEFAULT_PAYDAY_RULE.days;
+  const candidates: Date[] = [];
+  for (let mo = 0; mo <= 2; mo++) {
+    for (const anchor of days) {
+      let d = safeDate(t.getFullYear(), t.getMonth() + mo, anchor);
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - rule.offsetDays);
+      if (rule.weekendToFriday) {
+        const dow = d.getDay();
+        if (dow === 6) d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+        else if (dow === 0) d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 2);
+      }
+      if (d.getTime() >= t.getTime()) candidates.push(d);
+    }
   }
-  upcoming.sort((a, b) => a.getTime() - b.getTime());
-  return Math.round((upcoming[0].getTime() - today.getTime()) / 86400000);
+  candidates.sort((a, b) => a.getTime() - b.getTime());
+  const date = candidates[0];
+  return { date, daysUntil: diffDays(t, date) };
 }
 
 // ---------------------------------------------------------------------------
