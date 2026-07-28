@@ -20,10 +20,11 @@ import {
   type SpendTx,
 } from "@/lib/finance";
 import { netWorth, isAccessible, type PocketLike, type DebtLike } from "@/lib/netWorth";
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { useMemo } from "react";
 import { TrendingUp, CreditCard, Wallet, Calendar, Receipt, Crown, Zap, PiggyBank, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -42,13 +43,24 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-const PIE_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--accent))",
-  "hsl(var(--chart-3, 200 80% 55%))",
-  "hsl(var(--chart-4, 45 90% 60%))",
-  "hsl(var(--chart-5, 320 70% 60%))",
-];
+// Balances the projection Y axis needs slightly more precision than a plain
+// `/1000` + integer round: with narrow ranges (a few thousand pesos) integer
+// rounding collapses distinct ticks into the same "$3k" label.
+const formatKTick = (v: number) => {
+  const k = v / 1000;
+  return `$${k.toFixed(Math.abs(k) < 10 ? 1 : 0)}k`;
+};
+
+// Maps a StatCard `accent` text-color class to a matching translucent
+// background chip. Kept as a literal map (not template-literal string
+// concatenation) so Tailwind's static class scanner can discover every
+// class used in this file.
+const ACCENT_CHIP: Record<string, string> = {
+  "text-primary": "bg-primary/10",
+  "text-destructive": "bg-destructive/10",
+  "text-accent": "bg-accent/10",
+  "text-warning": "bg-warning/10",
+};
 
 function Dashboard() {
   const { data: profile } = useSuspenseQuery(profileQuery());
@@ -147,7 +159,7 @@ function Dashboard() {
 
       {/* Hero stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Wallet} label="Balance en bolsillos" value={money(totalBalance)} sub={`${pockets.length} bolsillos`} />
+        <StatCard icon={Wallet} label="Balance en bolsillos" value={money(totalBalance)} sub={`${pockets.length} bolsillos`} accent="text-primary" />
         <StatCard
           icon={PiggyBank}
           label="Patrimonio neto"
@@ -155,8 +167,8 @@ function Dashboard() {
           sub={`Activos ${money(nw.assets)} · Pasivos ${money(nw.liabilities)}`}
           accent={nw.net >= 0 ? "text-primary" : "text-destructive"}
         />
-        <StatCard icon={CreditCard} label="Crédito disponible" value={money(invisibleCash)} sub={`${cards.length} tarjetas`} />
-        <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={salary > 0 ? money(salary) : undefined} />
+        <StatCard icon={CreditCard} label="Crédito disponible" value={money(invisibleCash)} sub={`${cards.length} tarjetas`} accent="text-accent" />
+        <StatCard icon={Calendar} label="Próxima quincena" value={`${paydayIn} días`} sub={salary > 0 ? money(salary) : undefined} accent="text-warning" />
       </div>
 
       {globalLimit > 0 && globalStatus.level !== "ok" && (
@@ -219,8 +231,8 @@ function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      {pockets.map((p, i) => (
+                        <Cell key={i} fill={p.color} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => `${v}%`} />
@@ -229,12 +241,12 @@ function Dashboard() {
               </div>
 
               <div className="space-y-2">
-                {pockets.map((p, i) => (
+                {pockets.map((p) => (
                   <div key={p.id} className="flex items-center justify-between gap-3 text-sm">
                     <div className="flex items-center gap-2">
                       <span
                         className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
+                        style={{ background: p.color }}
                       />
                       <span>{p.name}</span>
                       {!isAccessible(p) && (
@@ -265,12 +277,22 @@ function Dashboard() {
 
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={projectionData}>
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => money(v)} />
-                <Line type="monotone" dataKey="balance" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-              </LineChart>
+              <ComposedChart data={projectionData}>
+                <defs>
+                  <linearGradient id="dashboardYieldFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={12} />
+                <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickFormatter={formatKTick} />
+                <Tooltip
+                  formatter={(v: number) => money(v)}
+                  contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}
+                />
+                <Area type="monotone" dataKey="balance" stroke="none" fill="url(#dashboardYieldFill)" />
+                <Line type="monotone" dataKey="balance" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
 
@@ -434,7 +456,9 @@ function StatCard({
     <Card className="p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className={cn("rounded-lg p-2", accent ? (ACCENT_CHIP[accent] ?? "bg-muted/50") : "bg-muted/50")}>
+          <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
+        </div>
       </div>
       <p className={`mt-2 text-xl font-semibold ${accent ?? ""}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}

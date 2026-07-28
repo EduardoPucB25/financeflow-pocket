@@ -5,6 +5,7 @@ import { pocketsQuery, debtsQuery, transactionsQuery } from "@/lib/queries";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { money } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   netWorth,
   monthRange,
@@ -130,15 +131,15 @@ function NetWorthPage() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={series}>
-                <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <XAxis dataKey="label" stroke="var(--color-muted-foreground)" fontSize={11} />
                 <YAxis
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   fontSize={11}
                   width={70}
                   tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                 />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}
                   formatter={(v: number) => money(v)}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -271,6 +272,17 @@ function Row({ label, value, tone, sub }: { label: string; value: string; tone?:
   );
 }
 
+// Maps a Stat `accent` text-color class to a matching translucent
+// background chip. Kept as a literal map (not template-literal string
+// concatenation) so Tailwind's static class scanner can discover every
+// class used in this file.
+const ACCENT_CHIP: Record<string, string> = {
+  "text-primary": "bg-primary/10",
+  "text-destructive": "bg-destructive/10",
+  "text-accent": "bg-accent/10",
+  "text-warning": "bg-warning/10",
+};
+
 function Stat({
   icon: Icon,
   label,
@@ -288,7 +300,9 @@ function Stat({
     <Card className="p-4">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{label}</span>
-        <Icon className={`h-4 w-4 ${accent ?? "text-muted-foreground"}`} />
+        <div className={cn("rounded-lg p-2", accent ? (ACCENT_CHIP[accent] ?? "bg-muted/50") : "bg-muted/50")}>
+          <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
+        </div>
       </div>
       <div className={`mt-2 text-xl md:text-2xl font-bold ${accent ?? ""}`}>{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}

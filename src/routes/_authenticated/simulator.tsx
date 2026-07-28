@@ -157,10 +157,10 @@ function SimulatorPage() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={projection}>
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} width={70} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={11} />
+                <YAxis stroke="var(--color-muted-foreground)" fontSize={11} width={70} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}
                   formatter={(v: number) => money(v)}
                 />
                 {view === "individual" && <Legend wrapperStyle={{ fontSize: 12 }} />}
@@ -280,10 +280,10 @@ function SimulatorPage() {
                     <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={(v) => v.slice(5)} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} width={70} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={11} tickFormatter={(v) => v.slice(5)} />
+                <YAxis stroke="var(--color-muted-foreground)" fontSize={11} width={70} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "0.75rem" }}
                   formatter={(v: number) => money(v)}
                 />
                 <Area type="monotone" dataKey="balance" stroke="none" fill="url(#balFill)" />
