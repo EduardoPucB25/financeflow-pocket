@@ -294,6 +294,9 @@ export type Database = {
           full_name: string | null
           global_spend_limit_monthly: number | null
           id: string
+          payday_days: number[] | null
+          payday_offset_days: number
+          payday_weekend_to_friday: boolean
           plan: string
           pro_expires_at: string | null
           salary_frequency: string
@@ -307,6 +310,9 @@ export type Database = {
           full_name?: string | null
           global_spend_limit_monthly?: number | null
           id: string
+          payday_days?: number[] | null
+          payday_offset_days?: number
+          payday_weekend_to_friday?: boolean
           plan?: string
           pro_expires_at?: string | null
           salary_frequency?: string
@@ -320,6 +326,9 @@ export type Database = {
           full_name?: string | null
           global_spend_limit_monthly?: number | null
           id?: string
+          payday_days?: number[] | null
+          payday_offset_days?: number
+          payday_weekend_to_friday?: boolean
           plan?: string
           pro_expires_at?: string | null
           salary_frequency?: string
