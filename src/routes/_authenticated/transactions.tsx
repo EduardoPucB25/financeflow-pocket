@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { money } from "@/lib/format";
+import { listStatementCycles, toISODate, cutoffForDate, formatDateEs } from "@/lib/finance";
+
 import { Plus, Trash2, Pencil, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Landmark, Users, EyeOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -45,6 +47,8 @@ type TxRow = {
   debt_id: string | null;
   include_in_totals: boolean;
   notes: string | null;
+  statement_cutoff: string | null;
+
 };
 
 const KIND_META: Record<string, { label: string; icon: typeof ArrowDownRight; tone: string; sign: string }> = {
@@ -130,8 +134,10 @@ function TransactionsPage() {
                       {new Date(t.occurred_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
                       {cp && ` · ${cp.name}`}
                       {source && ` · ${source}`}
+                      {t.statement_cutoff && ` · corte ${formatDateEs(t.statement_cutoff)}`}
                       {t.purpose && ` · ${t.purpose}`}
                     </div>
+
                     {t.notes && <div className="text-xs text-muted-foreground italic mt-1 truncate">{t.notes}</div>}
                   </div>
                 </div>
@@ -164,7 +170,7 @@ function TxDialog({
   mode: "create" | "edit";
   tx?: TxRow;
   pockets: { id: string; name: string }[];
-  debts: { id: string; name: string }[];
+  debts: { id: string; name: string; cutoff_day?: number | null; due_day?: number | null }[];
   counterparties: { id: string; name: string; kind: string }[];
 }) {
   const qc = useQueryClient();
@@ -179,9 +185,24 @@ function TxDialog({
     purpose: tx?.purpose ?? "",
     pocket_id: tx?.pocket_id ?? "",
     debt_id: tx?.debt_id ?? "",
+    statement_cutoff: tx?.statement_cutoff ?? "",
     include_in_totals: tx?.include_in_totals ?? true,
     notes: tx?.notes ?? "",
   });
+
+  const selectedDebt = debts.find((d) => d.id === form.debt_id);
+  const statementOptions = useMemo(() => {
+    if (!selectedDebt?.cutoff_day || !selectedDebt?.due_day) return [];
+    return listStatementCycles(selectedDebt.cutoff_day, selectedDebt.due_day, { back: 3, forward: 1 })
+      .slice()
+      .reverse();
+  }, [selectedDebt?.cutoff_day, selectedDebt?.due_day]);
+
+  /** Statement the transaction date falls into, used when the user leaves it automatic. */
+  const autoStatement = selectedDebt?.cutoff_day
+    ? toISODate(cutoffForDate(selectedDebt.cutoff_day, new Date(form.occurred_at)))
+    : "";
+
 
   const save = useMutation({
     mutationFn: async () => {
@@ -210,6 +231,8 @@ function TxDialog({
         purpose: form.purpose || null,
         pocket_id: form.pocket_id || null,
         debt_id: form.debt_id || null,
+        statement_cutoff: form.debt_id ? form.statement_cutoff || autoStatement || null : null,
+
         include_in_totals: form.include_in_totals,
         notes: form.notes || null,
       };
@@ -307,7 +330,10 @@ function TxDialog({
             </div>
             <div className="space-y-2">
               <Label>Deuda / tarjeta</Label>
-              <Select value={form.debt_id || "__none"} onValueChange={(v) => setForm({ ...form, debt_id: v === "__none" ? "" : v })}>
+              <Select
+                value={form.debt_id || "__none"}
+                onValueChange={(v) => setForm({ ...form, debt_id: v === "__none" ? "" : v, statement_cutoff: "" })}
+              >
                 <SelectTrigger><SelectValue placeholder="Ninguna" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Ninguna</SelectItem>
@@ -317,6 +343,30 @@ function TxDialog({
                 </SelectContent>
               </Select>
             </div>
+            {statementOptions.length > 0 && (
+              <div className="space-y-2 col-span-2">
+                <Label>Estado de cuenta (mes de la deuda)</Label>
+                <Select
+                  value={form.statement_cutoff || autoStatement || "__auto"}
+                  onValueChange={(v) => setForm({ ...form, statement_cutoff: v === "__auto" ? "" : v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__auto">Automático (según la fecha)</SelectItem>
+                    {statementOptions.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.monthLabel} — corte {formatDateEs(c.cutoff)} · paga {formatDateEs(c.due)}
+                        {c.status === "open" ? " (actual)" : c.status === "closed" ? " (cerrado)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define a qué corte se acumula este monto, aunque lo registres otro día.
+                </p>
+              </div>
+            )}
+
             <div className="col-span-2 flex items-center justify-between rounded-md border border-border p-3">
               <div>
                 <Label>Contar en totales</Label>

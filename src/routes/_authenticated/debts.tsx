@@ -15,14 +15,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { money, pct } from "@/lib/format";
 import {
-  nextCutoffAndDue,
+  
   formatDateEs,
   safeToSpend,
   periodSpend,
   limitStatus,
+  listStatementCycles,
+  statementTotals,
   type SpendTx,
+  type StatementTx,
+  type StatementCycle,
   type LimitStatus,
 } from "@/lib/finance";
+
 import { CreditCard, Plus, Trash2, Pencil, Landmark, Wallet, Home, Lock, AlertTriangle, CalendarClock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -214,7 +219,7 @@ function DebtCard({
   const Icon = (TYPE_META[d.debt_type] ?? TYPE_META.other).icon;
   const creditLimit = Number(d.credit_limit ?? 0);
   const hasCycle = d.debt_type === "card" && !!d.cutoff_day && !!d.due_day;
-  const cycle = hasCycle ? nextCutoffAndDue(d.cutoff_day!, d.due_day!) : null;
+  
   const hasLimit = d.debt_type === "card" && creditLimit > 0;
   const available = Math.max(0, creditLimit - Number(d.current_balance));
   const utilization = hasLimit
@@ -285,20 +290,8 @@ function DebtCard({
         </div>
       </div>
 
-      {cycle && (
-        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">
-          <div className="flex items-center gap-1.5 text-foreground font-medium">
-            <CalendarClock className="h-3.5 w-3.5" /> Fechas del ciclo
-          </div>
-          <div className="text-muted-foreground">
-            Corte: <span className="text-foreground">{formatDateEs(cycle.cutoff)}</span> (en {cycle.daysToCutoff}d)
-          </div>
-          <div className="text-muted-foreground">
-            Se paga: <span className="text-foreground">{formatDateEs(cycle.due)}</span> (en {cycle.daysToDue}d)
-          </div>
-          <div className="text-muted-foreground">Ventana sin intereses: hasta {cycle.maxFloat} días</div>
-        </div>
-      )}
+      {hasCycle && <StatementsPanel debt={d} txs={txs} />}
+
 
       {d.debt_type === "card" && !hasLimit && (
         <div className="rounded-md border border-dashed border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
@@ -459,8 +452,11 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
   });
 
   const isCard = form.debt_type === "card";
-  const preview =
-    isCard && form.cutoff_day && form.due_day ? nextCutoffAndDue(form.cutoff_day, form.due_day) : null;
+  const preview: StatementCycle[] =
+    isCard && form.cutoff_day && form.due_day
+      ? listStatementCycles(form.cutoff_day, form.due_day, { back: 1, forward: 1 })
+      : [];
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -531,12 +527,19 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
                   <Label>Día de pago</Label>
                   <Input type="number" min={1} max={31} value={form.due_day} onChange={(e) => setForm({ ...form, due_day: Number(e.target.value) })} />
                 </div>
-                {preview && (
-                  <div className="col-span-2 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                    Próximo corte: <span className="text-foreground">{formatDateEs(preview.cutoff)}</span> · se paga el{" "}
-                    <span className="text-foreground">{formatDateEs(preview.due)}</span>
+                {preview.length > 0 && (
+                  <div className="col-span-2 rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1.5">
+                    <div className="text-foreground font-medium">Así quedan tus estados de cuenta</div>
+                    {preview.map((c) => (
+                      <div key={c.key} className="text-muted-foreground">
+                        <span className="text-foreground">{c.monthLabel}</span> ·{" "}
+                        {formatDateEs(c.start)} → {formatDateEs(c.cutoff)} · paga {formatDateEs(c.due)}{" "}
+                        {c.status === "open" ? "(actual)" : c.status === "closed" ? "(cerrado, por pagar)" : "(próximo)"}
+                      </div>
+                    ))}
                   </div>
                 )}
+
                 <div className="space-y-2">
                   <Label>Límite gasto diario</Label>
                   <Input type="number" step="0.01" value={form.spend_limit_daily} onChange={(e) => setForm({ ...form, spend_limit_daily: Number(e.target.value) })} />
@@ -577,5 +580,64 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const STATEMENT_STATUS: Record<StatementCycle["status"], { label: string; cls: string }> = {
+  closed: { label: "Cerrado · por pagar", cls: "border-warning/40 bg-warning/10 text-warning" },
+  open: { label: "Ciclo actual", cls: "border-primary/40 bg-primary/10 text-primary" },
+  future: { label: "Próximo", cls: "border-border bg-muted/50 text-muted-foreground" },
+};
+
+/** Statements (estados de cuenta) anchored to real months, with their movements. */
+function StatementsPanel({ debt: d, txs }: { debt: DebtRow; txs: SpendTx[] }) {
+  const cutoffDay = d.cutoff_day!;
+  const dueDay = d.due_day!;
+  const cycles = useMemo(
+    () => listStatementCycles(cutoffDay, dueDay, { back: 2, forward: 1 }),
+    [cutoffDay, dueDay],
+  );
+  const totals = useMemo(
+    () => statementTotals(txs as StatementTx[], d.id, cutoffDay),
+    [txs, d.id, cutoffDay],
+  );
+
+  const visible = cycles.filter((c) => c.status !== "closed" || (totals[c.key]?.count ?? 0) > 0);
+  const list = visible.length > 0 ? visible : cycles.filter((c) => c.status === "open");
+
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-2">
+      <div className="flex items-center gap-1.5 text-foreground font-medium">
+        <CalendarClock className="h-3.5 w-3.5" /> Estados de cuenta
+      </div>
+      {list.map((c) => {
+        const t = totals[c.key];
+        const meta = STATEMENT_STATUS[c.status];
+        return (
+          <div key={c.key} className="rounded-md border border-border/60 bg-background/40 p-2 space-y-1">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="font-medium text-foreground">{c.monthLabel}</span>
+              <span className={`rounded px-1.5 py-0.5 border text-[10px] ${meta.cls}`}>{meta.label}</span>
+            </div>
+            <div className="text-muted-foreground">
+              Periodo: {formatDateEs(c.start)} → {formatDateEs(c.cutoff)}
+            </div>
+            <div className="text-muted-foreground">
+              Se paga: <span className="text-foreground">{formatDateEs(c.due)}</span>{" "}
+              {c.daysToDue >= 0 ? `(en ${c.daysToDue}d)` : `(venció hace ${-c.daysToDue}d)`}
+            </div>
+            {t ? (
+              <div className="text-muted-foreground">
+                Cargos <span className="text-destructive">{money(t.charges)}</span> · Pagos{" "}
+                <span className="text-primary">{money(t.payments)}</span> · Saldo del corte{" "}
+                <span className="text-foreground font-medium">{money(t.net)}</span>
+              </div>
+            ) : (
+              <div className="text-muted-foreground">Sin movimientos asignados.</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

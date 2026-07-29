@@ -452,6 +452,7 @@ export type Database = {
           occurred_at: string
           pocket_id: string | null
           purpose: string | null
+          statement_cutoff: string | null
           updated_at: string
           user_id: string
         }
@@ -468,6 +469,7 @@ export type Database = {
           occurred_at?: string
           pocket_id?: string | null
           purpose?: string | null
+          statement_cutoff?: string | null
           updated_at?: string
           user_id: string
         }
@@ -484,6 +486,7 @@ export type Database = {
           occurred_at?: string
           pocket_id?: string | null
           purpose?: string | null
+          statement_cutoff?: string | null
           updated_at?: string
           user_id?: string
         }

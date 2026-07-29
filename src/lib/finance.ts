@@ -346,3 +346,127 @@ export function safeToSpend(params: {
 export const YIELD_DISCLAIMER =
   "Representación estimada para cálculos — no refleja el rendimiento real de tu banco.";
 
+
+// ---------------------------------------------------------------------------
+// Statement cycles (estados de cuenta) — each cycle is anchored to a real month
+// ---------------------------------------------------------------------------
+
+export type StatementStatus = "closed" | "open" | "future";
+
+export interface StatementCycle {
+  /** ISO date (yyyy-mm-dd) of the cutoff — stable key for a statement. */
+  key: string;
+  /** First day included in this statement (day after the previous cutoff). */
+  start: Date;
+  cutoff: Date;
+  due: Date;
+  status: StatementStatus;
+  daysToCutoff: number;
+  daysToDue: number;
+  /** "Julio 2026" — the month the statement closes in. */
+  monthLabel: string;
+  /** "Corte 12 jul 2026 · paga 2 ago 2026" */
+  label: string;
+}
+
+export function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Cutoff date of the statement that contains `date`. */
+export function cutoffForDate(cutoffDay: number, date: Date | string): Date {
+  const d = startOfDay(typeof date === "string" ? new Date(date) : date);
+  const same = safeDate(d.getFullYear(), d.getMonth(), cutoffDay);
+  return d <= same ? same : safeDate(d.getFullYear(), d.getMonth() + 1, cutoffDay);
+}
+
+/** Build the full statement info for a given cutoff date. */
+export function statementForCutoff(
+  cutoff: Date,
+  cutoffDay: number,
+  dueDay: number,
+  today = new Date(),
+): StatementCycle {
+  const t = startOfDay(today);
+  let due = safeDate(cutoff.getFullYear(), cutoff.getMonth(), dueDay);
+  if (due <= cutoff) due = safeDate(cutoff.getFullYear(), cutoff.getMonth() + 1, dueDay);
+  const prevCutoff = safeDate(cutoff.getFullYear(), cutoff.getMonth() - 1, cutoffDay);
+  const start = new Date(prevCutoff.getFullYear(), prevCutoff.getMonth(), prevCutoff.getDate() + 1);
+  const currentCutoff = cutoffForDate(cutoffDay, t);
+  const status: StatementStatus =
+    cutoff < currentCutoff ? "closed" : cutoff.getTime() === currentCutoff.getTime() ? "open" : "future";
+  const monthLabel = cutoff.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+  return {
+    key: toISODate(cutoff),
+    start,
+    cutoff,
+    due,
+    status,
+    daysToCutoff: diffDays(t, cutoff),
+    daysToDue: diffDays(t, due),
+    monthLabel: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+    label: `Corte ${formatDateEs(cutoff)} · paga ${formatDateEs(due)}`,
+  };
+}
+
+/**
+ * Statement cycles around today: `back` already-closed ones, the open one,
+ * and `forward` upcoming ones. Ordered oldest → newest.
+ */
+export function listStatementCycles(
+  cutoffDay: number,
+  dueDay: number,
+  opts: { back?: number; forward?: number } = {},
+  today = new Date(),
+): StatementCycle[] {
+  const back = opts.back ?? 3;
+  const forward = opts.forward ?? 1;
+  const current = cutoffForDate(cutoffDay, startOfDay(today));
+  const out: StatementCycle[] = [];
+  for (let i = -back; i <= forward; i++) {
+    const c = safeDate(current.getFullYear(), current.getMonth() + i, cutoffDay);
+    out.push(statementForCutoff(c, cutoffDay, dueDay, today));
+  }
+  return out;
+}
+
+export interface StatementTx extends SpendTx {
+  statement_cutoff?: string | null;
+}
+
+/** Statement a transaction belongs to: explicit assignment wins, else its date. */
+export function txStatementKey(tx: StatementTx, cutoffDay: number): string {
+  if (tx.statement_cutoff) return tx.statement_cutoff;
+  return toISODate(cutoffForDate(cutoffDay, new Date(tx.occurred_at)));
+}
+
+export interface StatementTotals {
+  charges: number;
+  payments: number;
+  net: number;
+  count: number;
+}
+
+/** Charges (expenses) and payments recorded against a debt, per statement. */
+export function statementTotals(
+  txs: StatementTx[],
+  debtId: string,
+  cutoffDay: number,
+): Record<string, StatementTotals> {
+  const map: Record<string, StatementTotals> = {};
+  for (const t of txs) {
+    if (t.debt_id !== debtId || !t.include_in_totals) continue;
+    if (t.kind !== "expense" && t.kind !== "payment") continue;
+    const key = txStatementKey(t, cutoffDay);
+    const row = (map[key] ??= { charges: 0, payments: 0, net: 0, count: 0 });
+    const amt = Number(t.amount);
+    if (t.kind === "expense") row.charges += amt;
+    else row.payments += amt;
+    row.net = row.charges - row.payments;
+    row.count += 1;
+  }
+  return map;
+}
