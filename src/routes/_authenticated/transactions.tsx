@@ -212,6 +212,8 @@ function TxDialog({
         purpose: form.purpose || null,
         pocket_id: form.pocket_id || null,
         debt_id: form.debt_id || null,
+        statement_cutoff: form.debt_id ? form.statement_cutoff || autoStatement || null : null,
+
         include_in_totals: form.include_in_totals,
         notes: form.notes || null,
       };
