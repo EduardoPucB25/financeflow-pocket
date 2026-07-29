@@ -229,7 +229,7 @@ export function StatementsDialog({ debt }: { debt: StatementDebt }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="w-full">
-          <CalendarRange className="mr-2 h-4 w-4" /> Estados de cuenta
+          <CalendarRange className="mr-2 h-4 w-4" /> Gestionar pagos mensuales
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
