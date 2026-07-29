@@ -134,8 +134,10 @@ function TransactionsPage() {
                       {new Date(t.occurred_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
                       {cp && ` · ${cp.name}`}
                       {source && ` · ${source}`}
+                      {t.statement_cutoff && ` · corte ${formatDateEs(t.statement_cutoff)}`}
                       {t.purpose && ` · ${t.purpose}`}
                     </div>
+
                     {t.notes && <div className="text-xs text-muted-foreground italic mt-1 truncate">{t.notes}</div>}
                   </div>
                 </div>
