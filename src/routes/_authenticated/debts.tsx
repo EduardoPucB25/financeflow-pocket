@@ -572,3 +572,62 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
     </Dialog>
   );
 }
+
+const STATEMENT_STATUS: Record<StatementCycle["status"], { label: string; cls: string }> = {
+  closed: { label: "Cerrado · por pagar", cls: "border-warning/40 bg-warning/10 text-warning" },
+  open: { label: "Ciclo actual", cls: "border-primary/40 bg-primary/10 text-primary" },
+  future: { label: "Próximo", cls: "border-border bg-muted/50 text-muted-foreground" },
+};
+
+/** Statements (estados de cuenta) anchored to real months, with their movements. */
+function StatementsPanel({ debt: d, txs }: { debt: DebtRow; txs: SpendTx[] }) {
+  const cutoffDay = d.cutoff_day!;
+  const dueDay = d.due_day!;
+  const cycles = useMemo(
+    () => listStatementCycles(cutoffDay, dueDay, { back: 2, forward: 1 }),
+    [cutoffDay, dueDay],
+  );
+  const totals = useMemo(
+    () => statementTotals(txs as StatementTx[], d.id, cutoffDay),
+    [txs, d.id, cutoffDay],
+  );
+
+  const visible = cycles.filter((c) => c.status !== "closed" || (totals[c.key]?.count ?? 0) > 0);
+  const list = visible.length > 0 ? visible : cycles.filter((c) => c.status === "open");
+
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-2">
+      <div className="flex items-center gap-1.5 text-foreground font-medium">
+        <CalendarClock className="h-3.5 w-3.5" /> Estados de cuenta
+      </div>
+      {list.map((c) => {
+        const t = totals[c.key];
+        const meta = STATEMENT_STATUS[c.status];
+        return (
+          <div key={c.key} className="rounded-md border border-border/60 bg-background/40 p-2 space-y-1">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="font-medium text-foreground">{c.monthLabel}</span>
+              <span className={`rounded px-1.5 py-0.5 border text-[10px] ${meta.cls}`}>{meta.label}</span>
+            </div>
+            <div className="text-muted-foreground">
+              Periodo: {formatDateEs(c.start)} → {formatDateEs(c.cutoff)}
+            </div>
+            <div className="text-muted-foreground">
+              Se paga: <span className="text-foreground">{formatDateEs(c.due)}</span>{" "}
+              {c.daysToDue >= 0 ? `(en ${c.daysToDue}d)` : `(venció hace ${-c.daysToDue}d)`}
+            </div>
+            {t ? (
+              <div className="text-muted-foreground">
+                Cargos <span className="text-destructive">{money(t.charges)}</span> · Pagos{" "}
+                <span className="text-primary">{money(t.payments)}</span> · Saldo del corte{" "}
+                <span className="text-foreground font-medium">{money(t.net)}</span>
+              </div>
+            ) : (
+              <div className="text-muted-foreground">Sin movimientos asignados.</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
