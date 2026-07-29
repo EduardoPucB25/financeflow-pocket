@@ -13,6 +13,9 @@ import logoUrl from "@/assets/FinFloPo.svg";
 import { Wallet, TrendingUp, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Ingresar — Finance Flow Pocket" },
@@ -47,6 +50,11 @@ const BENEFITS = [
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const goNext = () => {
+    if (next) window.location.href = next;
+    else navigate({ to: "/dashboard", replace: true });
+  };
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -61,9 +69,10 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) goNext();
     });
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, next]);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +81,7 @@ function AuthPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Bienvenido de vuelta");
-    navigate({ to: "/dashboard", replace: true });
+    goNext();
   };
 
   const signUp = async (e: React.FormEvent) => {
@@ -86,7 +95,7 @@ function AuthPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}${next ?? "/dashboard"}`,
         data: { full_name: fullName },
       },
     });
@@ -104,7 +113,7 @@ function AuthPage() {
     }
     setLoading(false);
     toast.success("Cuenta creada. Revisa tu correo si se pide confirmación.");
-    navigate({ to: "/dashboard", replace: true });
+    goNext();
   };
 
   const requestReset = async (e: React.FormEvent) => {
