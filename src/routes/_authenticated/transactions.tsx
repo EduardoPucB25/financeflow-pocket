@@ -166,7 +166,7 @@ function TxDialog({
   mode: "create" | "edit";
   tx?: TxRow;
   pockets: { id: string; name: string }[];
-  debts: { id: string; name: string }[];
+  debts: { id: string; name: string; cutoff_day?: number | null; due_day?: number | null }[];
   counterparties: { id: string; name: string; kind: string }[];
 }) {
   const qc = useQueryClient();
@@ -181,9 +181,24 @@ function TxDialog({
     purpose: tx?.purpose ?? "",
     pocket_id: tx?.pocket_id ?? "",
     debt_id: tx?.debt_id ?? "",
+    statement_cutoff: tx?.statement_cutoff ?? "",
     include_in_totals: tx?.include_in_totals ?? true,
     notes: tx?.notes ?? "",
   });
+
+  const selectedDebt = debts.find((d) => d.id === form.debt_id);
+  const statementOptions = useMemo(() => {
+    if (!selectedDebt?.cutoff_day || !selectedDebt?.due_day) return [];
+    return listStatementCycles(selectedDebt.cutoff_day, selectedDebt.due_day, { back: 3, forward: 1 })
+      .slice()
+      .reverse();
+  }, [selectedDebt?.cutoff_day, selectedDebt?.due_day]);
+
+  /** Statement the transaction date falls into, used when the user leaves it automatic. */
+  const autoStatement = selectedDebt?.cutoff_day
+    ? toISODate(cutoffForDate(selectedDebt.cutoff_day, new Date(form.occurred_at)))
+    : "";
+
 
   const save = useMutation({
     mutationFn: async () => {
