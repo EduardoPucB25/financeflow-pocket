@@ -214,7 +214,7 @@ function DebtCard({
   const Icon = (TYPE_META[d.debt_type] ?? TYPE_META.other).icon;
   const creditLimit = Number(d.credit_limit ?? 0);
   const hasCycle = d.debt_type === "card" && !!d.cutoff_day && !!d.due_day;
-  const cycle = hasCycle ? nextCutoffAndDue(d.cutoff_day!, d.due_day!) : null;
+  
   const hasLimit = d.debt_type === "card" && creditLimit > 0;
   const available = Math.max(0, creditLimit - Number(d.current_balance));
   const utilization = hasLimit
