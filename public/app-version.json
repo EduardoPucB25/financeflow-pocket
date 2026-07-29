@@ -1,6 +1,6 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0",
+  "versionCode": 2,
+  "versionName": "0.2.0",
   "apkUrl": "/downloads/finance-flow-pocket.apk",
-  "notes": "Versión inicial."
+  "notes": "Actualizaciones dentro de la app, días de pago configurables y estados de cuenta mensuales."
 }
