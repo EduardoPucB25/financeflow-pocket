@@ -285,20 +285,8 @@ function DebtCard({
         </div>
       </div>
 
-      {cycle && (
-        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">
-          <div className="flex items-center gap-1.5 text-foreground font-medium">
-            <CalendarClock className="h-3.5 w-3.5" /> Fechas del ciclo
-          </div>
-          <div className="text-muted-foreground">
-            Corte: <span className="text-foreground">{formatDateEs(cycle.cutoff)}</span> (en {cycle.daysToCutoff}d)
-          </div>
-          <div className="text-muted-foreground">
-            Se paga: <span className="text-foreground">{formatDateEs(cycle.due)}</span> (en {cycle.daysToDue}d)
-          </div>
-          <div className="text-muted-foreground">Ventana sin intereses: hasta {cycle.maxFloat} días</div>
-        </div>
-      )}
+      {hasCycle && <StatementsPanel debt={d} txs={txs} />}
+
 
       {d.debt_type === "card" && !hasLimit && (
         <div className="rounded-md border border-dashed border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
