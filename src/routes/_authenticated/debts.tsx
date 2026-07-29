@@ -524,12 +524,19 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
                   <Label>Día de pago</Label>
                   <Input type="number" min={1} max={31} value={form.due_day} onChange={(e) => setForm({ ...form, due_day: Number(e.target.value) })} />
                 </div>
-                {preview && (
-                  <div className="col-span-2 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                    Próximo corte: <span className="text-foreground">{formatDateEs(preview.cutoff)}</span> · se paga el{" "}
-                    <span className="text-foreground">{formatDateEs(preview.due)}</span>
+                {preview.length > 0 && (
+                  <div className="col-span-2 rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1.5">
+                    <div className="text-foreground font-medium">Así quedan tus estados de cuenta</div>
+                    {preview.map((c) => (
+                      <div key={c.key} className="text-muted-foreground">
+                        <span className="text-foreground">{c.monthLabel}</span> ·{" "}
+                        {formatDateEs(c.start)} → {formatDateEs(c.cutoff)} · paga {formatDateEs(c.due)}{" "}
+                        {c.status === "open" ? "(actual)" : c.status === "closed" ? "(cerrado, por pagar)" : "(próximo)"}
+                      </div>
+                    ))}
                   </div>
                 )}
+
                 <div className="space-y-2">
                   <Label>Límite gasto diario</Label>
                   <Input type="number" step="0.01" value={form.spend_limit_daily} onChange={(e) => setForm({ ...form, spend_limit_daily: Number(e.target.value) })} />
