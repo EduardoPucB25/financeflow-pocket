@@ -47,6 +47,8 @@ type TxRow = {
   debt_id: string | null;
   include_in_totals: boolean;
   notes: string | null;
+  statement_cutoff: string | null;
+
 };
 
 const KIND_META: Record<string, { label: string; icon: typeof ArrowDownRight; tone: string; sign: string }> = {
