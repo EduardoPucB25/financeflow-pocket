@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "sdk_version": "0.25.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://jdqqnwvxymjegsmavxkp.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "finance-flow-poket",
+      "version": "0.1.0",
+      "title": "Finance Flow Poket"
+    },
+    "tools": [
+      {
+        "name": "financial_summary",
+        "title": "Resumen financiero",
+        "description": "Devuelve el resumen del usuario: capital en bolsillos, capital líquido, deuda total y patrimonio neto.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_pockets",
+        "title": "Listar bolsillos",
+        "description": "Lista los bolsillos (apartados) del usuario con saldo, propósito y accesibilidad.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_debts",
+        "title": "Listar deudas y tarjetas",
+        "description": "Lista las deudas y tarjetas de crédito del usuario con saldo actual, saldo del corte, límite y días de corte/pago.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_transactions",
+        "title": "Listar movimientos",
+        "description": "Lista los movimientos (gastos, ingresos, pagos, transferencias) del usuario, opcionalmente filtrados por fecha o tipo.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "since": {
+              "description": "Fecha ISO (yyyy-mm-dd) desde la cual listar.",
+              "type": "string"
+            },
+            "until": {
+              "description": "Fecha ISO (yyyy-mm-dd) hasta la cual listar.",
+              "type": "string"
+            },
+            "kind": {
+              "description": "Tipo de movimiento a filtrar.",
+              "type": "string",
+              "enum": [
+                "expense",
+                "income",
+                "payment",
+                "transfer",
+                "adjustment"
+              ]
+            },
+            "limit": {
+              "description": "Máximo de filas a devolver (por defecto 50, máximo 200).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "record_transaction",
+        "title": "Registrar movimiento",
+        "description": "Registra un movimiento (gasto, ingreso, pago, transferencia o ajuste). Los saldos del bolsillo o la deuda se ajustan automáticamente.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Descripción corta del movimiento."
+            },
+            "amount": {
+              "type": "number",
+              "description": "Monto positivo del movimiento."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "expense",
+                "income",
+                "payment",
+                "transfer",
+                "adjustment"
+              ],
+              "description": "Tipo de movimiento."
+            },
+            "occurred_at": {
+              "description": "Fecha ISO (yyyy-mm-dd). Por defecto hoy.",
+              "type": "string"
+            },
+            "pocket_id": {
+              "description": "UUID del bolsillo afectado.",
+              "type": "string"
+            },
+            "debt_id": {
+              "description": "UUID de la deuda o tarjeta afectada.",
+              "type": "string"
+            },
+            "statement_cutoff": {
+              "description": "Fecha ISO del corte al que se asigna el movimiento en la tarjeta.",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Notas adicionales.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "amount",
+            "kind"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
