@@ -309,7 +309,10 @@ function TxDialog({
             </div>
             <div className="space-y-2">
               <Label>Deuda / tarjeta</Label>
-              <Select value={form.debt_id || "__none"} onValueChange={(v) => setForm({ ...form, debt_id: v === "__none" ? "" : v })}>
+              <Select
+                value={form.debt_id || "__none"}
+                onValueChange={(v) => setForm({ ...form, debt_id: v === "__none" ? "" : v, statement_cutoff: "" })}
+              >
                 <SelectTrigger><SelectValue placeholder="Ninguna" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Ninguna</SelectItem>
@@ -319,6 +322,30 @@ function TxDialog({
                 </SelectContent>
               </Select>
             </div>
+            {statementOptions.length > 0 && (
+              <div className="space-y-2 col-span-2">
+                <Label>Estado de cuenta (mes de la deuda)</Label>
+                <Select
+                  value={form.statement_cutoff || autoStatement || "__auto"}
+                  onValueChange={(v) => setForm({ ...form, statement_cutoff: v === "__auto" ? "" : v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__auto">Automático (según la fecha)</SelectItem>
+                    {statementOptions.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.monthLabel} — corte {formatDateEs(c.cutoff)} · paga {formatDateEs(c.due)}
+                        {c.status === "open" ? " (actual)" : c.status === "closed" ? " (cerrado)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define a qué corte se acumula este monto, aunque lo registres otro día.
+                </p>
+              </div>
+            )}
+
             <div className="col-span-2 flex items-center justify-between rounded-md border border-border p-3">
               <div>
                 <Label>Contar en totales</Label>
