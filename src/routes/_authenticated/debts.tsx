@@ -24,6 +24,7 @@ import {
   type LimitStatus,
 } from "@/lib/finance";
 import { CreditCard, Plus, Trash2, Pencil, Landmark, Wallet, Home, Lock, AlertTriangle, CalendarClock } from "lucide-react";
+import { StatementsDialog } from "@/components/StatementsDialog";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -284,6 +285,17 @@ function DebtCard({
           <div className="font-medium">{money(d.minimum_payment)}</div>
         </div>
       </div>
+
+      {d.debt_type === "card" && (
+        <StatementsDialog
+          debt={{
+            id: d.id,
+            name: d.name,
+            statement_balance: Number(d.statement_balance),
+            due_day: d.due_day,
+          }}
+        />
+      )}
 
       {cycle && (
         <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery, subscriptionQuery } from "@/lib/queries";
+import { profileQuery, pocketsQuery, debtsQuery, flowsQuery, transactionsQuery, subscriptionQuery, debtStatementsQuery, type DebtStatementRow } from "@/lib/queries";
 import { deriveSubStatus } from "@/lib/subscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import {
 } from "@/lib/finance";
 import { netWorth, isAccessible, type PocketLike, type DebtLike } from "@/lib/netWorth";
 import { PieChart, Pie, Cell, ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { TrendingUp, Wallet, Calendar, Receipt, Crown, Zap, PiggyBank, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     context.queryClient.ensureQueryData(debtsQuery());
     context.queryClient.ensureQueryData(flowsQuery());
     context.queryClient.ensureQueryData(transactionsQuery());
+    context.queryClient.ensureQueryData(debtStatementsQuery());
   },
   component: Dashboard,
 });
@@ -77,6 +78,7 @@ function Dashboard() {
   const { data: debtsData } = useSuspenseQuery(debtsQuery());
   const { data: flows } = useSuspenseQuery(flowsQuery());
   const { data: transactions } = useSuspenseQuery(transactionsQuery());
+  const { data: statements } = useSuspenseQuery(debtStatementsQuery());
   const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
   const { isPro } = deriveSubStatus(subscription);
   const qc = useQueryClient();
@@ -211,6 +213,8 @@ function Dashboard() {
           accent="text-warning"
         />
       </div>
+
+      <PayableSection statements={statements} debts={debts} />
 
       {globalLimit > 0 && globalStatus.level !== "ok" && (
         <Card className="flex items-start gap-3 border-destructive/40 p-4">
@@ -513,6 +517,122 @@ function Dashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function PayableSection({
+  statements,
+  debts,
+}: {
+  statements: DebtStatementRow[];
+  debts: { id: string; name: string; debt_type: string; status?: string }[];
+}) {
+  const [range, setRange] = useState<"week" | "month">("week");
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+
+  const debtName = (id: string) => debts.find((d) => d.id === id)?.name ?? "Deuda";
+  const pending = statements.filter((s) => s.status === "pending");
+  const dueOf = (s: DebtStatementRow) => new Date(`${s.due_date}T00:00:00`);
+
+  const overdue = pending.filter((s) => dueOf(s) < today);
+  const inRange = pending.filter((s) => {
+    const d = dueOf(s);
+    if (d < today) return false;
+    return range === "week"
+      ? d <= weekEnd
+      : d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  });
+  const rows = [...overdue, ...inRange];
+  const total = rows.reduce((sum, s) => sum + Number(s.amount), 0);
+
+  // Nudge: active cards with no statement captured for the current month.
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+  const cardsWithoutStatement = debts.filter(
+    (d) =>
+      d.debt_type === "card" &&
+      (d.status ?? "active") === "active" &&
+      !statements.some(
+        (s) => s.debt_id === d.id && s.period_month === currentMonth && s.period_year === currentYear,
+      ),
+  );
+
+  return (
+    <Card className="p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold">Por pagar</h2>
+          <p className="text-sm text-muted-foreground">
+            {rows.length === 0 ? "Sin pagos en este periodo" : `${rows.length} pago${rows.length === 1 ? "" : "s"} · total ${money(total)}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-md border border-border p-1">
+            <Button size="sm" variant={range === "week" ? "default" : "ghost"} onClick={() => setRange("week")}>
+              Esta semana
+            </Button>
+            <Button size="sm" variant={range === "month" ? "default" : "ghost"} onClick={() => setRange("month")}>
+              Este mes
+            </Button>
+          </div>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/debts">Gestionar</Link>
+          </Button>
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nada pendiente en este periodo.</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {rows.map((s) => {
+            const d = dueOf(s);
+            const isOverdue = d < today;
+            const daysTo = Math.round((d.getTime() - today.getTime()) / 86400000);
+            const urgent = !isOverdue && daysTo <= 3;
+            return (
+              <div key={s.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={cn(
+                      "h-2.5 w-2.5 shrink-0 rounded-full",
+                      isOverdue ? "bg-destructive" : urgent ? "bg-warning" : "bg-primary",
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{debtName(s.debt_id)}</p>
+                    <p className={cn("text-xs", isOverdue ? "text-destructive" : "text-muted-foreground")}>
+                      {formatDateEs(s.due_date)}
+                      {isOverdue
+                        ? ` · vencido hace ${Math.abs(daysTo)} ${Math.abs(daysTo) === 1 ? "día" : "días"}`
+                        : daysTo === 0
+                          ? " · hoy"
+                          : ` · en ${daysTo} ${daysTo === 1 ? "día" : "días"}`}
+                    </p>
+                  </div>
+                </div>
+                <span className="shrink-0 font-semibold">{money(Number(s.amount))}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {cardsWithoutStatement.length > 0 && (
+        <div className="mt-3 border-t border-border pt-3">
+          {cardsWithoutStatement.map((d) => (
+            <p key={d.id} className="text-xs text-muted-foreground">
+              {d.name}: sin estado de cuenta este mes ·{" "}
+              <Link to="/debts" className="text-primary underline">
+                Agregar
+              </Link>
+            </p>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 

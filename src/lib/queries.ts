@@ -90,6 +90,45 @@ export const debtsQuery = () =>
     },
   });
 
+/** Row shape for debt_statements (table ships in migration 20260728120000;
+ * not in generated types yet — local type until types.ts regenerates). */
+export interface DebtStatementRow {
+  id: string;
+  user_id: string;
+  debt_id: string;
+  period_year: number;
+  period_month: number;
+  amount: number;
+  due_date: string;
+  status: "pending" | "paid";
+  paid_at: string | null;
+  transaction_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const debtStatementsQuery = () =>
+  queryOptions({
+    queryKey: ["debt_statements"],
+    queryFn: async (): Promise<DebtStatementRow[]> => {
+      const { data, error } = await (supabase as any).from("debt_statements")
+        .select("*")
+        .order("due_date", { ascending: true });
+      if (error) {
+        // Resilience: if the table hasn't been migrated yet (deploy lands
+        // before the migration applies), don't take down every consumer —
+        // the dashboard renders its empty state instead.
+        if (`${error.message}`.includes("schema cache") || `${error.message}`.includes("does not exist")) {
+          console.warn("[queries] debt_statements table not available yet:", error.message);
+          return [];
+        }
+        throw error;
+      }
+      return (data ?? []) as DebtStatementRow[];
+    },
+  });
+
 export const flowsQuery = () =>
   queryOptions({
     queryKey: ["scheduled_flows"],
