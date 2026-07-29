@@ -452,8 +452,11 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
   });
 
   const isCard = form.debt_type === "card";
-  const preview =
-    isCard && form.cutoff_day && form.due_day ? nextCutoffAndDue(form.cutoff_day, form.due_day) : null;
+  const preview: StatementCycle[] =
+    isCard && form.cutoff_day && form.due_day
+      ? listStatementCycles(form.cutoff_day, form.due_day, { back: 1, forward: 1 })
+      : [];
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
