@@ -1,91 +1,20 @@
-## Qué encontré (verificado)
+## Diagnóstico
 
-- **Bug del día de corte**: en `debts.tsx` el formulario de edición inicializa su estado una sola vez al montarse y nunca se vuelve a sincronizar con los datos guardados. Al reabrir la ventana ves valores viejos aunque la base sí guardó el cambio (confirmé en la base: "Pago Revolut Julio" y "Junio" ya tienen corte 12 / pago 3).
-- **Invisible Cash negativo**: las 4 tarjetas tienen `credit_limit = 0`, y el cálculo es `límite − saldo`, por eso sale `-$3,763.18`. Falta validar el límite y ocultar el dato cuando no está definido.
-- **Los movimientos no afectan nada**: `transactions` ya guarda `pocket_id` y `debt_id`, pero ningún saldo de bolsillo ni de tarjeta se recalcula al registrar un gasto.
-- **Bolsillos**: solo existe `is_locked_savings`; no hay concepto de "para qué sirve" ni de "cuenta para rendimientos".
+El archivo de migración `supabase/migrations/20260728120000_add_debt_statements.sql` existe en el repositorio (llegó por el sync de GitHub), pero **la tabla nunca se creó en la base de datos**: la consulta a `public.debt_statements` responde `PGRST205 — Could not find the table`. El código del frontend (`StatementsDialog.tsx`, `debtStatementsQuery`) ya está completo y correcto; solo falta el respaldo en base de datos.
 
----
+## Solución
 
-## 1. Base de datos
+1. Aplicar la migración de la tabla `debt_statements` con:
+   - Campos: deuda asociada, año y mes del periodo, monto, fecha de vencimiento, estado (pendiente/pagado), fecha de pago, movimiento vinculado y notas.
+   - Restricción de un solo estado de cuenta por deuda y mes.
+   - Permisos de acceso vía API y reglas de seguridad: cada usuario solo ve y gestiona sus propios estados de cuenta.
+   - Índices por usuario/vencimiento y por deuda, más actualización automática de la marca de tiempo.
 
-**Bolsillos** — nuevas columnas:
-- `purpose`: gasto / ahorro / inversión / reserva
-- `accessibility`: disponible / restringido / bloqueado
-- `earns_yield` (sí/no) y `yield_rate` propio (si se deja vacío, usa el general del perfil)
-- `yield_start_date` y `yield_base_balance`: punto de partida del interés compuesto
-- `spend_limit_daily`, `spend_limit_weekly`, `spend_limit_monthly`
+2. Regenerar los tipos de la base de datos y quitar los `as any` / el fallback silencioso de `debtStatementsQuery` en `src/lib/queries.ts`, ya que la tabla pasará a existir de verdad y conviene que los errores reales sí se muestren.
 
-**Deudas** — nuevas columnas:
-- `statement_balance` (saldo del último corte, lo que realmente se paga)
-- `spend_limit_daily`, `spend_limit_weekly`, `spend_limit_monthly`
-- `auto_apply_transactions` (sí/no)
+3. Verificar en la preview: crear un estado de cuenta en una tarjeta, pagarlo desde un bolsillo y deshacer el pago, confirmando que saldo del bolsillo y de la deuda se ajustan.
 
-**Perfil** — `global_spend_limit_monthly` y `net_worth_note`.
+### Detalles técnicos
 
-Todas con valores por defecto para no romper registros actuales.
-
-**Automatización de saldos**: un disparador en la base ajusta saldos al insertar, editar o borrar un movimiento:
-- Gasto con bolsillo → resta del bolsillo
-- Gasto con tarjeta → suma al saldo de la tarjeta
-- Pago de deuda → resta del bolsillo y baja el saldo de la tarjeta
-- Ingreso con bolsillo → suma al bolsillo
-- Movimientos marcados "no cuenta" se ignoran
-
-Los campos de saldo pasan a ser de solo lectura en la interfaz (con un botón "ajustar saldo" que crea un movimiento de ajuste, para que todo quede trazable).
-
----
-
-## 2. Deudas — correcciones y precisión
-
-- Arreglar el formulario para que siempre cargue los valores actuales al abrirlo.
-- Mostrar **fechas reales** en vez de solo días: "Corte: 12 ago 2026 · Pago: 3 sep 2026 (en 37 días)".
-- Validar límite de crédito: si es 0 o vacío, se pide y no se muestra Invisible Cash negativo.
-- Nueva sección por tarjeta: **crédito disponible** = límite − saldo, con barra de uso y el saldo del corte separado del saldo actual.
-- **Simulador de crédito disponible**: cuánto puedes gastar hoy / esta semana / este mes sin pasarte, calculado con el disponible real y los días que faltan al corte y al pago.
-- **Alertas**: aviso ámbar al 75% del límite de gasto configurado y rojo al superarlo, tanto por tarjeta como global.
-
----
-
-## 3. Bolsillos con función y accesibilidad
-
-- Cada bolsillo declara su **función** (gasto / ahorro / inversión / reserva) y su **accesibilidad** (disponible, restringido, bloqueado), con agrupación visual: "Disponible para gastar" vs "No disponible".
-- Interruptor **"Cuenta para rendimientos"** con su propia tasa opcional.
-- Presupuesto por bolsillo con límite diario/semanal/mensual y barra de consumo del periodo actual, calculada con los movimientos reales ligados a ese bolsillo.
-
----
-
-## 4. Capital y Patrimonio (nueva pantalla `/patrimonio`)
-
-- **Patrimonio neto** = bolsillos − deudas, con su evolución.
-- **Capital líquido** = solo bolsillos accesibles.
-- **Diferencia de gastos**: comparativa ingresos vs gastos del periodo actual contra el anterior (variación en $ y %), desglose por categoría, por bolsillo y por tarjeta.
-- Gráfica de barras ingresos/gastos y línea de patrimonio.
-
----
-
-## 5. Rendimiento aplicable (interés compuesto diario)
-
-- Se calcula al vuelo: desde `yield_start_date` y `yield_base_balance`, con la tasa del bolsillo, hasta hoy. Cada día que pasa el rendimiento sube solo, sin procesos nocturnos.
-- Botón **"Aplicar rendimiento"** en el balance: fija la fecha y el monto base para empezar a acumular; y **"Reiniciar base"** cuando cambie el saldo.
-- Etiqueta visible en todos lados: *"Representación estimada para cálculos — no refleja el rendimiento real de tu banco."*
-- El Balance total del panel gana un selector para elegir qué bolsillos entran al cálculo de rendimientos (se recuerda la selección).
-
----
-
-## 6. Proyecciones ligadas a la selección
-
-- La proyección deja de usar "todos los bolsillos" y usa solo los marcados para rendimiento.
-- Vista **individual por bolsillo** (una línea por bolsillo con su propia tasa) y vista **en conjunto**.
-- El simulador existente puede precargar un bolsillo real como punto de partida.
-
----
-
-## Detalles técnicos
-
-- Migración con las columnas nuevas + disparador `apply_transaction_effects` (insert/update/delete) sobre `transactions`, con `GRANT` correspondientes.
-- Nuevos helpers en `src/lib/finance.ts`: `nextCutoffAndDue` (fechas reales, corrige el redondeo actual), `accruedYield`, `safeToSpend`, `periodSpend`.
-- Nuevo `src/lib/netWorth.ts` para patrimonio y comparativas de periodo.
-- Nueva ruta `src/routes/_authenticated/networth.tsx` + entrada en el menú.
-- Reescritura parcial de `debts.tsx` (formulario sincronizado, fechas, alertas), `pockets.tsx` (función/accesibilidad/rendimiento/presupuesto), `dashboard.tsx` (selector de rendimiento, tarjeta de patrimonio) y `simulator.tsx` (proyección individual y conjunta).
-- Se mantienen los límites del plan gratuito y el bloqueo Pro actual de Invisible Cash.
+- La migración es idéntica al SQL ya versionado en el repo (mismo nombre de archivo y contenido), por lo que el repositorio y la base quedan consistentes.
+- El pago sigue usando el trigger existente `tx_balance_sync` mediante una transacción `kind = 'payment'`; no se toca esa lógica.

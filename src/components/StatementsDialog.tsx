@@ -94,12 +94,12 @@ export function StatementsDialog({ debt }: { debt: StatementDebt }) {
         notes: f.notes || null,
       };
       if (f.id) {
-        const { error } = await (supabase as any).from("debt_statements")
+        const { error } = await supabase.from("debt_statements")
           .update(payload)
           .eq("id", f.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any).from("debt_statements").insert({
+        const { error } = await supabase.from("debt_statements").insert({
           ...payload,
           user_id: user.user.id,
           debt_id: debt.id,
@@ -122,7 +122,7 @@ export function StatementsDialog({ debt }: { debt: StatementDebt }) {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("debt_statements").delete().eq("id", id);
+      const { error } = await supabase.from("debt_statements").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -158,7 +158,7 @@ export function StatementsDialog({ debt }: { debt: StatementDebt }) {
         .single();
       if (txError) throw txError;
       // 2) Mark the statement paid, linked to the transaction.
-      const { error } = await (supabase as any).from("debt_statements")
+      const { error } = await supabase.from("debt_statements")
         .update({ status: "paid", paid_at: new Date().toISOString(), transaction_id: tx.id })
         .eq("id", statement.id);
       if (error) throw error;
@@ -181,7 +181,7 @@ export function StatementsDialog({ debt }: { debt: StatementDebt }) {
           .eq("id", statement.transaction_id);
         if (txError) throw txError;
       }
-      const { error } = await (supabase as any).from("debt_statements")
+      const { error } = await supabase.from("debt_statements")
         .update({ status: "pending", paid_at: null, transaction_id: null })
         .eq("id", statement.id);
       if (error) throw error;
