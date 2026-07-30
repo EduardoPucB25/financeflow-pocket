@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { NativeSplash } from "@/components/NativeSplash";
 import { isNativeApp } from "@/lib/native/platform";
+import { openExternalUrl } from "@/lib/native/notificationCapture";
 
 function NotFoundComponent() {
   return (
@@ -67,9 +68,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
               Si el problema continúa, puede que necesites actualizar la app.
             </p>
             <button
-              onClick={() =>
-                window.open(`${window.location.origin}/downloads/finance-flow-pocket.apk`, "_blank")
-              }
+              onClick={() => void openExternalUrl("/downloads/finance-flow-pocket.apk")}
               className="mt-1 text-xs text-primary underline"
             >
               Descargar la última versión (APK)

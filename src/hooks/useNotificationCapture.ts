@@ -48,7 +48,11 @@ export function useNotificationCapture(userId: string | null | undefined) {
       ]);
       if (cancelled) return;
       setPermissionGranted(granted);
-      setWatchedPackagesState(packages.length ? packages : DEFAULT_PACKAGES);
+      // Older APK binaries serialize the package list as a string instead of a
+      // JS array (Kotlin List put straight into JSObject). Normalize so a bad
+      // shape can never crash consumers calling array methods on this state.
+      const list = Array.isArray(packages) ? packages.filter((p): p is string => typeof p === "string") : [];
+      setWatchedPackagesState(list.length ? list : DEFAULT_PACKAGES);
     };
     void refresh();
     const onVisible = () => {

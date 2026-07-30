@@ -19,6 +19,8 @@ export interface NotificationCapturePlugin {
   openPermissionSettings(): Promise<void>;
   getWatchedPackages(): Promise<{ packages: string[] }>;
   setWatchedPackages(options: { packages: string[] }): Promise<void>;
+  /** Opens a URL in the system browser (v3+ binaries; older ones reject). */
+  openExternal(options: { url: string }): Promise<void>;
   addListener(
     eventName: "bankNotification",
     listenerFunc: (event: BankNotificationEvent) => void,
@@ -45,5 +47,26 @@ export const NotificationCapture: NotificationCapturePlugin = isNativeAndroid()
         return { packages: [] };
       },
       async setWatchedPackages() {},
+      async openExternal() {},
       addListener: async () => ({ remove: async () => {} }) as PluginListenerHandle,
     };
+
+/**
+ * Open a URL outside the app. Inside the Capacitor WebView `window.open` is a
+ * silent no-op, so on native we go through the plugin (fires an ACTION_VIEW
+ * intent → system browser). Binaries older than v3 don't implement the method;
+ * fall back to `window.open` there so web/dev keep working and old APKs at
+ * least attempt something.
+ */
+export async function openExternalUrl(url: string): Promise<void> {
+  const absolute = new URL(url, window.location.origin).toString();
+  if (isNativeAndroid()) {
+    try {
+      await NotificationCapture.openExternal({ url: absolute });
+      return;
+    } catch {
+      // v1/v2 binary without openExternal — fall through.
+    }
+  }
+  window.open(absolute, "_blank", "noopener");
+}

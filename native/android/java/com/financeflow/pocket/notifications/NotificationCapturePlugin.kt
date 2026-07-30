@@ -2,8 +2,10 @@ package com.financeflow.pocket.notifications
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -48,8 +50,19 @@ class NotificationCapturePlugin : Plugin() {
         val prefs = context.getSharedPreferences(NotificationCaptureService.PREFS, Context.MODE_PRIVATE)
         val packages = NotificationCaptureService.getWatchedPackages(prefs)
         val ret = JSObject()
-        ret.put("packages", packages.toList())
+        // JSArray (not a raw Kotlin List) so the bridge delivers a real JS
+        // array; a List serializes as a string and crashes array consumers.
+        ret.put("packages", JSArray(packages.toList()))
         call.resolve(ret)
+    }
+
+    @PluginMethod
+    fun openExternal(call: PluginCall) {
+        val url = call.getString("url") ?: return call.reject("url required")
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        call.resolve()
     }
 
     @PluginMethod

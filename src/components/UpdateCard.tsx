@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { isNativeApp } from "@/lib/native/platform";
+import { openExternalUrl } from "@/lib/native/notificationCapture";
 import { Download, RefreshCw } from "lucide-react";
 
 interface InstalledVersion {
@@ -88,11 +89,7 @@ function UpdateCardInner() {
           {manifest.data.notes && (
             <p className="text-xs text-muted-foreground">{manifest.data.notes}</p>
           )}
-          <Button
-            onClick={() =>
-              window.open(new URL(manifest.data.apkUrl, window.location.origin).toString(), "_blank")
-            }
-          >
+          <Button onClick={() => void openExternalUrl(manifest.data.apkUrl)}>
             <Download className="mr-2 h-4 w-4" /> Descargar actualización
           </Button>
           <p className="text-xs text-muted-foreground">
