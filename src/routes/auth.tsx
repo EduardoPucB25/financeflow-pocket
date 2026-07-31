@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { lovable } from "@/integrations/lovable";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import logoUrl from "@/assets/FinFloPo.svg";
 import { Wallet, TrendingUp, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
