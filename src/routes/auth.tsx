@@ -129,6 +129,22 @@ function AuthPage() {
     toast.success("Te enviamos un correo para restablecer tu contraseña.");
   };
 
+  const signInWithGoogle = async () => {
+    setGoogleLoading(true);
+    if (next) sessionStorage.setItem("ffp:next", next);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setGoogleLoading(false);
+      return toast.error(result.error.message ?? "No pudimos iniciar sesión con Google.");
+    }
+    if (result.redirected) return;
+    goNext();
+  };
+
+
+
   return (
     <div className="min-h-screen flex flex-col relative">
       <CosmicBackground />
