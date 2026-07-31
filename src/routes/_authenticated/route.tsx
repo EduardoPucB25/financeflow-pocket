@@ -8,6 +8,8 @@ import { PastDueBanner } from "@/components/PastDueBanner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import { isNativeApp } from "@/lib/native/platform";
 import { MobileShell } from "@/components/MobileShell";
+import { GuideProvider } from "@/components/guide/GuideProvider";
+import { GuideHelpButton } from "@/components/guide/GuideHelpButton";
 import logoUrl from "@/assets/FinFloPo.svg";
 import {
   LayoutDashboard,
@@ -85,19 +87,22 @@ function AuthedLayout() {
 
   if (isNativeApp()) {
     return (
-      <MobileShell
-        pendingCount={pendingCount}
-        userEmail={user.email ?? ""}
-        isPro={isPro}
-        isPastDue={isPastDue}
-        onSignOut={signOut}
-      >
-        <Outlet />
-      </MobileShell>
+      <GuideProvider userId={user.id}>
+        <MobileShell
+          pendingCount={pendingCount}
+          userEmail={user.email ?? ""}
+          isPro={isPro}
+          isPastDue={isPastDue}
+          onSignOut={signOut}
+        >
+          <Outlet />
+        </MobileShell>
+      </GuideProvider>
     );
   }
 
   return (
+    <GuideProvider userId={user.id}>
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
       {/* Sidebar (desktop) */}
       <aside className="hidden md:flex md:w-60 md:flex-col border-r border-border bg-sidebar text-sidebar-foreground">
@@ -139,6 +144,7 @@ function AuthedLayout() {
               </Badge>
             )}
           </div>
+          <GuideHelpButton variant="sidebar" />
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
             <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión
           </Button>
@@ -151,9 +157,12 @@ function AuthedLayout() {
           <img src={logoUrl} alt="Finance Flow Pocket" className="h-7 w-7 rounded-md" />
           Finance Flow Pocket
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setMobileOpen((v) => !v)}>
-          <Menu className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <GuideHelpButton variant="icon" />
+          <Button variant="ghost" size="sm" onClick={() => setMobileOpen((v) => !v)}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
       </header>
       {mobileOpen && (
         <div className="md:hidden border-b border-border bg-card">
@@ -204,5 +213,6 @@ function AuthedLayout() {
         <Outlet />
       </main>
     </div>
+    </GuideProvider>
   );
 }

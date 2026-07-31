@@ -25,7 +25,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
 import { UpdateCard } from "@/components/UpdateCard";
-import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown, Download, KeyRound } from "lucide-react";
+import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown, Download, KeyRound, HelpCircle, RotateCcw } from "lucide-react";
+import { useGuideProgress } from "@/lib/guide/useGuideProgress";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -115,7 +116,7 @@ function SettingsPage() {
         <p className="text-sm text-muted-foreground">Personaliza tu perfil financiero.</p>
       </div>
 
-      <Card className="p-6 space-y-4">
+      <Card data-guide="settings-perfil" className="p-6 space-y-4">
         <div className="space-y-2">
           <Label>Nombre</Label>
           <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
@@ -236,7 +237,36 @@ function SettingsPage() {
       <BillingHistoryCard />
       <AndroidDetectionCard />
       <UpdateCard />
+      <HelpResetCard />
     </div>
+  );
+}
+
+function HelpResetCard() {
+  const { data: profile } = useQuery(profileQuery());
+  const { resetAll } = useGuideProgress(profile?.id ?? "");
+
+  return (
+    <Card className="p-6 space-y-3">
+      <div className="flex items-center gap-2">
+        <HelpCircle className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Ayuda</h2>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        ¿Quieres volver a ver las guías de cada pantalla? Restablécelas y aparecerán de nuevo la
+        próxima vez que entres a cada sección.
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={async () => {
+          await resetAll();
+          toast.success("Guías restablecidas. Vuelve a cualquier pantalla para verlas.");
+        }}
+      >
+        <RotateCcw className="mr-2 h-4 w-4" /> Restablecer guías
+      </Button>
+    </Card>
   );
 }
 
@@ -309,7 +339,7 @@ function SubscriptionCard() {
   };
 
   return (
-    <Card className="p-6 space-y-4">
+    <Card data-guide="settings-suscripcion" className="p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Crown className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">Suscripción</h2>
@@ -422,7 +452,7 @@ function AndroidDetectionCard() {
 
   if (!isPro) {
     return (
-      <Card className="p-6 space-y-3 bg-card/70 backdrop-blur border-dashed">
+      <Card data-guide="settings-deteccion" className="p-6 space-y-3 bg-card/70 backdrop-blur border-dashed">
         <div className="flex items-center gap-2">
           <Smartphone className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Detección automática (Android)</h2>
@@ -457,7 +487,7 @@ function AndroidDetectionCardInner() {
   }, [watchedPackages]);
 
   return (
-    <Card className="p-6 space-y-4 bg-card/70 backdrop-blur">
+    <Card data-guide="settings-deteccion" className="p-6 space-y-4 bg-card/70 backdrop-blur">
       <div className="flex items-center gap-2">
         <Smartphone className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">Detección automática (Android)</h2>

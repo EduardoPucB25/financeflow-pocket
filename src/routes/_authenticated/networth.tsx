@@ -103,7 +103,7 @@ function NetWorthPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div data-guide="nw-stats" className="grid gap-4 md:grid-cols-4">
         <Stat
           icon={PiggyBank}
           label="Patrimonio neto"
@@ -123,7 +123,7 @@ function NetWorthPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="p-5 lg:col-span-2">
+        <Card data-guide="nw-flujo" className="p-5 lg:col-span-2">
           <div className="mb-4">
             <h2 className="font-semibold">Ingresos vs gastos (6 meses)</h2>
             <p className="text-xs text-muted-foreground">Solo movimientos que cuentan en totales.</p>

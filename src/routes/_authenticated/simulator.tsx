@@ -203,7 +203,7 @@ function SimulatorPage() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="p-5 space-y-4 lg:col-span-1">
+        <Card data-guide="sim-parametros" className="p-5 space-y-4 lg:col-span-1">
           <h2 className="font-semibold">Parámetros</h2>
           <div className="space-y-2">
             <Label>Nombre</Label>
@@ -257,12 +257,12 @@ function SimulatorPage() {
             <Label>Horizonte (meses): {form.horizon_months}</Label>
             <Input type="range" min={1} max={60} value={form.horizon_months} onChange={(e) => setForm({ ...form, horizon_months: Number(e.target.value) })} />
           </div>
-          <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
+          <Button data-guide="sim-guardar" className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
             <Save className="h-4 w-4 mr-2" /> Guardar escenario
           </Button>
         </Card>
 
-        <Card className="p-5 lg:col-span-2">
+        <Card data-guide="sim-proyeccion" className="p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold">Proyección</h2>

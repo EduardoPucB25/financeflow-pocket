@@ -79,7 +79,7 @@ function PocketsPage() {
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+        <div data-guide="pockets-resumen">
           <h1 className="text-2xl md:text-3xl font-bold">Bolsillos</h1>
           <p className="text-sm text-muted-foreground">
             Total asignado: <span className={totalPct === 100 ? "text-primary" : "text-warning"}>{pct(totalPct)}</span>
@@ -92,7 +92,9 @@ function PocketsPage() {
             )}
           </p>
         </div>
-        <NewPocketDialog isPro={isPro} pocketsCount={pockets.length} />
+        <div data-guide="nuevo-bolsillo">
+          <NewPocketDialog isPro={isPro} pocketsCount={pockets.length} />
+        </div>
       </div>
 
       {!isPro && pockets.length >= 2 && (
@@ -110,6 +112,7 @@ function PocketsPage() {
         </div>
       )}
 
+      <div data-guide="pockets-list">
       <Section
         title="Disponibles para gastar"
         description="Puedes usar este dinero en cualquier momento."
@@ -119,6 +122,7 @@ function PocketsPage() {
         txs={spendTxs}
         onDelete={(id) => del.mutate(id)}
       />
+      </div>
       <Section
         title="Restringidos y bloqueados"
         description="Reservados para ahorro, inversión o emergencias."

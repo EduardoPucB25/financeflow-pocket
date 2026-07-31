@@ -170,7 +170,7 @@ function UpgradePage() {
             </CardFooter>
           </Card>
 
-          <Card className="border-primary/40 bg-primary/5 relative overflow-hidden">
+          <Card data-guide="plan-pro" className="border-primary/40 bg-primary/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-3">
               <Zap className="h-5 w-5 text-primary" />
             </div>

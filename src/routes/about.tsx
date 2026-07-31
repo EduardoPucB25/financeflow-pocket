@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TrendingUp, CreditCard, Wallet, Sparkles } from "lucide-react";
+import { TrendingUp, CreditCard, Wallet, Sparkles, GraduationCap } from "lucide-react";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import logoUrl from "@/assets/FinFloPo.svg";
 
@@ -31,6 +31,9 @@ function AboutPage() {
           Finance Flow Pocket
         </div>
         <nav className="flex items-center gap-4 text-sm">
+          <Link to="/aprende" className="text-muted-foreground hover:text-foreground">
+            Aprende
+          </Link>
           <Link to="/pricing" className="text-muted-foreground hover:text-foreground">
             Precios
           </Link>
@@ -104,12 +107,33 @@ function AboutPage() {
             </div>
           ))}
         </div>
+
+        <section className="mt-20 rounded-2xl border border-border bg-card/50 p-8 md:p-10">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/40 px-3 py-1 text-xs text-muted-foreground">
+            <GraduationCap className="h-3 w-3 text-primary" /> Aprende
+          </span>
+          <h2 className="mt-4 text-2xl font-bold tracking-tight md:text-3xl">
+            ¿Nuevo en finanzas personales? Empieza por el método.
+          </h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            Finance Flow Pocket se inspira en el método 50/15/25/10 de Mark Tilbury: divide cada
+            ingreso en Esenciales, Valores, Growth y Estabilidad, y ajusta los porcentajes a tu
+            realidad. Te lo explicamos paso a paso, junto con la historia de cómo nació la app.
+          </p>
+          <Link
+            to="/aprende"
+            className="mt-6 inline-block rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Ver la guía completa
+          </Link>
+        </section>
       </main>
 
       <footer className="border-t border-border/60 bg-background/60 backdrop-blur">
         <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div>© {new Date().getFullYear()} Finance Flow Pocket · Angel Eduardo Puc Barrera</div>
           <nav className="flex flex-wrap items-center gap-4">
+            <Link to="/aprende" className="hover:text-foreground">Aprende</Link>
             <Link to="/pricing" className="hover:text-foreground">Precios</Link>
             <Link to="/terms" className="hover:text-foreground">Términos</Link>
             <Link to="/privacy" className="hover:text-foreground">Privacidad</Link>

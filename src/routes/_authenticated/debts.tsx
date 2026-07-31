@@ -117,7 +117,7 @@ function DebtsPage() {
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+        <div data-guide="debts-resumen">
           <h1 className="text-2xl md:text-3xl font-bold">Deudas</h1>
           <p className="text-sm text-muted-foreground">
             Total: <span className="text-destructive font-medium">{money(totalDebt)}</span> · Pago mínimo mensual:{" "}
@@ -476,7 +476,7 @@ function DebtDialog({ mode, debt, disabled }: { mode: "create" | "edit"; debt?: 
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nueva deuda</Button>
+          <Button data-guide="nueva-deuda" disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nueva deuda</Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -618,7 +618,7 @@ function StatementsPanel({ debt: d, txs }: { debt: DebtRow; txs: SpendTx[] }) {
   const list = visible.length > 0 ? visible : cycles.filter((c) => c.status === "open");
 
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-2">
+    <div data-guide="debt-ciclos" className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-2">
       <div className="flex items-center gap-1.5 text-foreground font-medium">
         <CalendarClock className="h-3.5 w-3.5" /> Estados de cuenta
       </div>

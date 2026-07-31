@@ -16,6 +16,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AprendeRouteImport } from './routes/aprende'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -69,6 +70,11 @@ const McpRoute = McpRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AprendeRoute = AprendeRouteImport.update({
+  id: '/aprende',
+  path: '/aprende',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -175,6 +181,7 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/aprende': typeof AprendeRoute
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/aprende': typeof AprendeRoute
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/aprende': typeof AprendeRoute
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/aprende'
     | '/auth'
     | '/mcp'
     | '/pricing'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/aprende'
     | '/auth'
     | '/mcp'
     | '/pricing'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/about'
+    | '/aprende'
     | '/auth'
     | '/mcp'
     | '/pricing'
@@ -344,6 +356,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
+  AprendeRoute: typeof AprendeRoute
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
@@ -407,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aprende': {
+      id: '/aprende'
+      path: '/aprende'
+      fullPath: '/aprende'
+      preLoaderRoute: typeof AprendeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -580,6 +600,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutRoute: AboutRoute,
+  AprendeRoute: AprendeRoute,
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,

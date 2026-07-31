@@ -100,7 +100,7 @@ function FlowsPage() {
           Aún no tienes flujos programados.
         </Card>
       ) : (
-        <Card className="divide-y divide-border">
+        <Card data-guide="flows-lista" className="divide-y divide-border">
           {visibleFlows.map((f) => {
             const freqDesc =
               f.frequency === "weekly" && f.day_of_week !== null
@@ -194,7 +194,7 @@ function FlowDialog({ mode, pockets, flow, disabled }: { mode: "create" | "edit"
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
+          <Button data-guide="nuevo-flujo" disabled={disabled}><Plus className="h-4 w-4 mr-1" /> Nuevo flujo</Button>
         )}
       </DialogTrigger>
       <DialogContent>

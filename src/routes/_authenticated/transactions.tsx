@@ -109,7 +109,7 @@ function TransactionsPage() {
           Aún no hay transacciones. Registra tu primer movimiento arriba.
         </Card>
       ) : (
-        <Card className="divide-y divide-border">
+        <Card data-guide="tx-lista" className="divide-y divide-border">
           {txs.map((t) => {
             const meta = KIND_META[t.kind] ?? KIND_META.expense;
             const Icon = meta.icon;
@@ -263,7 +263,7 @@ function TxDialog({
         {mode === "edit" ? (
           <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
         ) : (
-          <Button><Plus className="h-4 w-4 mr-1" /> Registrar</Button>
+          <Button data-guide="registrar"><Plus className="h-4 w-4 mr-1" /> Registrar</Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -423,7 +423,7 @@ function CounterpartiesDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Users className="h-4 w-4 mr-1" /> Contrapartes</Button>
+        <Button data-guide="contrapartes" variant="outline"><Users className="h-4 w-4 mr-1" /> Contrapartes</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>

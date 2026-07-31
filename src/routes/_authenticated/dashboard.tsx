@@ -189,7 +189,7 @@ function Dashboard() {
       </div>
 
       {/* Hero stats */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div data-guide="hero-stats" className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Wallet} label="Balance total" value={money(totalBalance)} sub={`Líquido ${money(nw.liquid)}`} accent="text-primary" />
         <StatCard
           icon={PiggyBank}
@@ -255,7 +255,7 @@ function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Allocation */}
-        <Card className="p-4">
+        <Card data-guide="distribucion" className="p-4">
           <div className="mb-4 flex items-start justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold">Distribución por bolsillos</h2>
@@ -318,7 +318,7 @@ function Dashboard() {
         </Card>
 
         {/* Yield projection with pocket selector */}
-        <Card className="p-4">
+        <Card data-guide="rendimiento" className="p-4">
           <div className="mb-4">
             <h2 className="text-base font-semibold">Rendimiento compuesto</h2>
             <p className="text-sm text-muted-foreground">
@@ -560,7 +560,7 @@ function PayableSection({
   );
 
   return (
-    <Card className="p-4">
+    <Card data-guide="por-pagar" className="p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">Por pagar</h2>

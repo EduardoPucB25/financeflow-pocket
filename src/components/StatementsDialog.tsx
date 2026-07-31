@@ -228,7 +228,7 @@ export function StatementsDialog({ debt }: { debt: StatementDebt }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="w-full">
+        <Button data-guide="debt-statements" size="sm" variant="outline" className="w-full">
           <CalendarRange className="mr-2 h-4 w-4" /> Gestionar pagos mensuales
         </Button>
       </DialogTrigger>

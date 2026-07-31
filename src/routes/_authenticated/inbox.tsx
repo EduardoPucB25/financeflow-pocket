@@ -109,7 +109,7 @@ function InboxPage() {
         </p>
       </header>
 
-      <section className="space-y-3">
+      <section data-guide="inbox-pendientes" className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Pendientes ({pending.length})
         </h2>

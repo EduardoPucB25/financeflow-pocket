@@ -179,7 +179,8 @@ function AuthPage() {
             </ul>
           </div>
 
-          <Card className="w-full max-w-md mx-auto p-6 backdrop-blur-md bg-card/70 border-border/60">
+          <div className="w-full max-w-md mx-auto">
+          <Card className="w-full p-6 backdrop-blur-md bg-card/70 border-border/60">
             <div className="mb-6 text-center">
               <img
                 src={logoUrl}
@@ -375,6 +376,13 @@ function AuthPage() {
               </TabsContent>
             </Tabs>
           </Card>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            ¿Nuevo en finanzas?{" "}
+            <Link to="/aprende" className="underline hover:text-foreground">
+              Empieza con la guía del método
+            </Link>
+          </p>
+          </div>
         </div>
       </div>
     </div>
