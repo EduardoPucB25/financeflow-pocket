@@ -1,6 +1,6 @@
 {
-  "versionCode": 3,
-  "versionName": "0.3.0",
+  "versionCode": 5,
+  "versionName": "0.5.0",
   "apkUrl": "/downloads/finance-flow-pocket.apk",
-  "notes": "Corrige el acceso a Ajustes y habilita la descarga de actualizaciones desde la app."
+  "notes": "Selector de apps instaladas, soporte de Revolut y asistente de movimientos para asignar tus gastos por bolsillo."
 }

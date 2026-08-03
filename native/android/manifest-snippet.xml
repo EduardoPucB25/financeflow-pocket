@@ -10,7 +10,17 @@
 <!-- permissions -->
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<!-- Enumerar apps instaladas para el selector de detección (APK sideload). -->
+<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 <!-- BIND_NOTIFICATION_LISTENER_SERVICE must be requested by the <service>, not <uses-permission>. -->
+
+<!-- inside the .MainActivity <activity>: deep link de retorno del OAuth -->
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="financeflowpocket" android:host="google-auth" />
+</intent-filter>
 
 <!-- inside <application> ... </application> -->
 <service

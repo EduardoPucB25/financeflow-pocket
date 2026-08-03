@@ -29,6 +29,9 @@ object BankParsers {
         "com.bancoazteca.bazdigitalmovil",
         "com.hsbc.hsbcnetmobile",
         "com.citibanamex.banamexmovil",
+        "com.revolut.revolut",
+        "com.klar.consumer",
+        "com.storicard.stori",
     )
 
     private val PARSERS: Map<String, List<(String?, String) -> ParsedNotification?>> = mapOf(
@@ -36,6 +39,7 @@ object BankParsers {
         "mx.com.santander.appsantander" to listOf(::parseSantander),
         "com.nu.production" to listOf(::parseNu),
         "com.mercadopago.wallet" to listOf(::parseMercadoPago),
+        "com.revolut.revolut" to listOf(::parseRevolut),
     )
 
     fun parse(packageName: String, title: String?, text: String, timestamp: Long): ParsedNotification {
@@ -65,8 +69,26 @@ object BankParsers {
 
     private fun inferCurrency(text: String): String = when {
         text.contains("USD", ignoreCase = true) -> "USD"
-        text.contains("EUR", ignoreCase = true) -> "EUR"
+        text.contains("EUR", ignoreCase = true) || text.contains("€") -> "EUR"
+        text.contains("GBP", ignoreCase = true) || text.contains("£") -> "GBP"
         else -> "MXN"
+    }
+
+    /**
+     * Parses an amount string that may use either US (`1,234.56`) or European
+     * (`1.234,56`) grouping. The last of `.`/`,` is treated as the decimal
+     * separator. (The TS classifier re-derives the amount on insert; this is a
+     * best-effort first pass for offline/native use.)
+     */
+    private fun normalizeAmount(raw: String): Double? {
+        var s = raw.trim()
+        val lastComma = s.lastIndexOf(',')
+        val lastDot = s.lastIndexOf('.')
+        s = when {
+            lastComma > lastDot -> s.replace(".", "").replace(',', '.')
+            else -> s.replace(",", "")
+        }
+        return s.toDoubleOrNull()
     }
 
     // ---- Per-bank parsers ---------------------------------------------------
@@ -171,6 +193,38 @@ object BankParsers {
             text = text,
             amount = amount,
             currency = inferCurrency(text),
+            merchant = merchant,
+            type = type,
+            rawText = text,
+            timestamp = 0L,
+        )
+    }
+
+    /** Matches Revolut amounts like `€20.00`, `£5`, `$1,234.56`, `MXN 300`. */
+    private val REVOLUT_AMOUNT = Regex("""(?:€|£|\\$|MXN|USD|EUR|GBP)\s?([\d.,]+)""", RegexOption.IGNORE_CASE)
+
+    private fun parseRevolut(title: String?, text: String): ParsedNotification? {
+        val hay = "${title ?: ""} $text"
+        val m = REVOLUT_AMOUNT.find(hay) ?: return null
+        val amount = normalizeAmount(m.groupValues[1]) ?: return null
+        val lower = hay.lowercase()
+        val type = when {
+            lower.contains("received") || lower.contains("refund") ||
+                lower.contains("topped up") || lower.contains("top-up") ||
+                lower.contains("added") || lower.contains("cashback") -> "credit"
+            lower.contains("you sent") || lower.contains("you paid") ||
+                lower.contains("payment to") || lower.contains("spent") ||
+                lower.contains("withdrew") || lower.contains("withdrawal") -> "charge"
+            else -> "unknown"
+        }
+        val merchantRe = Regex("""(?:to|at|from)\s+([^\n.,]{2,40})""", RegexOption.IGNORE_CASE)
+        val merchant = merchantRe.find(hay)?.groupValues?.get(1)?.trim()
+        return ParsedNotification(
+            packageName = "",
+            title = title,
+            text = text,
+            amount = amount,
+            currency = inferCurrency(hay),
             merchant = merchant,
             type = type,
             rawText = text,

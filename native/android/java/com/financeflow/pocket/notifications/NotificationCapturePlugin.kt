@@ -75,6 +75,43 @@ class NotificationCapturePlugin : Plugin() {
         call.resolve()
     }
 
+    /**
+     * Lists user-facing installed apps (those with a launcher activity) so the
+     * web layer can offer a "pick the apps you use" selector without the user
+     * typing package names. Requires QUERY_ALL_PACKAGES in the manifest.
+     *
+     * Returns { apps: [{ packageName, label }] } sorted by label. Uses JSArray
+     * of JSObject (never a Kotlin List) so the bridge yields a real JS array.
+     */
+    @PluginMethod
+    fun getInstalledApps(call: PluginCall) {
+        val pm = context.packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveInfos = pm.queryIntentActivities(intent, 0)
+        val seen = HashSet<String>()
+        val list = ArrayList<Pair<String, String>>() // (label, packageName)
+        for (ri in resolveInfos) {
+            val pkg = ri.activityInfo?.packageName ?: continue
+            if (pkg == context.packageName) continue
+            if (!seen.add(pkg)) continue
+            val label = try { ri.loadLabel(pm)?.toString() } catch (e: Exception) { null } ?: pkg
+            list.add(Pair(label, pkg))
+        }
+        list.sortBy { it.first.lowercase() }
+        val apps = JSArray()
+        for ((label, pkg) in list) {
+            apps.put(JSObject().apply {
+                put("packageName", pkg)
+                put("label", label)
+            })
+        }
+        val ret = JSObject()
+        ret.put("apps", apps)
+        call.resolve(ret)
+    }
+
     companion object {
         @Volatile private var instance: NotificationCapturePlugin? = null
 
