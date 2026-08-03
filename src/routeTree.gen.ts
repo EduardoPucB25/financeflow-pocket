@@ -15,6 +15,7 @@ import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AprendeRouteImport } from './routes/aprende'
 import { Route as AboutRouteImport } from './routes/about'
@@ -65,6 +66,11 @@ const PricingRoute = PricingRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth-callback',
+  path: '/auth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/aprende': typeof AprendeRoute
   '/auth': typeof AuthRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/aprende': typeof AprendeRoute
   '/auth': typeof AuthRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/aprende': typeof AprendeRoute
   '/auth': typeof AuthRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/aprende'
     | '/auth'
+    | '/auth-callback'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/aprende'
     | '/auth'
+    | '/auth-callback'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/aprende'
     | '/auth'
+    | '/auth-callback'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -358,6 +370,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AprendeRoute: typeof AprendeRoute
   AuthRoute: typeof AuthRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -413,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth-callback': {
+      id: '/auth-callback'
+      path: '/auth-callback'
+      fullPath: '/auth-callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -602,6 +622,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AprendeRoute: AprendeRoute,
   AuthRoute: AuthRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,

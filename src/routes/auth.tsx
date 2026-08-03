@@ -9,6 +9,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
+import { isNativeApp } from "@/lib/native/platform";
+import { openExternalUrl } from "@/lib/native/notificationCapture";
+import { OAUTH_STATE_KEY } from "@/components/NativeDeepLinkAuth";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import logoUrl from "@/assets/FinFloPo.svg";
 import { Wallet, TrendingUp, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
@@ -133,6 +136,25 @@ function AuthPage() {
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
     if (next) sessionStorage.setItem("ffp:next", next);
+
+    if (isNativeApp()) {
+      // In the APK the WebView must not navigate to Google (the flow would
+      // strand the session in the system browser). Open the broker in the
+      // system browser instead, bouncing back via /auth-callback → the
+      // financeflowpocket:// deep link handled by NativeDeepLinkAuth.
+      const state = crypto.randomUUID().replace(/-/g, "");
+      window.localStorage.setItem(OAUTH_STATE_KEY, state);
+      const params = new URLSearchParams({
+        provider: "google",
+        redirect_uri: `${window.location.origin}/auth-callback`,
+        state,
+      });
+      await openExternalUrl(`${window.location.origin}/~oauth/initiate?${params.toString()}`);
+      setGoogleLoading(false);
+      toast.info("Continúa en el navegador; te regresaremos a la app.");
+      return;
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });

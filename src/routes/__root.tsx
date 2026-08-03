@@ -18,6 +18,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { NativeSplash } from "@/components/NativeSplash";
+import { NativeDeepLinkAuth } from "@/components/NativeDeepLinkAuth";
 import { isNativeApp } from "@/lib/native/platform";
 import { openExternalUrl } from "@/lib/native/notificationCapture";
 
@@ -167,6 +168,7 @@ function RootComponent() {
       <Outlet />
       <Toaster />
       <NativeSplash />
+      <NativeDeepLinkAuth />
     </QueryClientProvider>
   );
 }
