@@ -6,6 +6,7 @@ import { seedDefaultPockets, detectedTransactionsQuery, subscriptionQuery } from
 import { deriveSubStatus } from "@/lib/subscription";
 import { PastDueBanner } from "@/components/PastDueBanner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
+import { useDetectedRealtime } from "@/hooks/useDetectedRealtime";
 import { isNativeApp } from "@/lib/native/platform";
 import { MobileShell } from "@/components/MobileShell";
 import { GuideProvider } from "@/components/guide/GuideProvider";
@@ -64,6 +65,8 @@ function AuthedLayout() {
   // Activates the Android notification-listener bridge on native builds.
   // On web this is a safe no-op.
   useNotificationCapture(user.id);
+  // Realtime so the assistant shows new detections instantly on any session.
+  useDetectedRealtime(user.id);
 
   const pendingDetected = useQuery({
     ...detectedTransactionsQuery(),

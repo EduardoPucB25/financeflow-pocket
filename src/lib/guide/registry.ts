@@ -106,17 +106,22 @@ export const GUIDE_REGISTRY: Record<string, GuideStep[]> = {
   ],
   "/inbox": [
     {
-      title: "Bandeja de detección",
-      body: "Si usas la app en Android con la detección activada, las notificaciones de tu banco aparecen aquí como movimientos sugeridos.",
+      title: "Asistente de movimientos",
+      body: "Cada compra o transferencia que detecto en tus apps de banco aparece aquí como un mensaje, listo para que lo asignes.",
     },
     {
       target: "inbox-pendientes",
-      title: "Pendientes",
-      body: "Revisa cada detección: \"Aprobar\" la convierte en movimiento eligiendo bolsillo o tarjeta; \"Descartar\" la ignora.",
+      title: "Por asignar",
+      body: "Cada movimiento espera tu decisión: a qué bolsillo o tarjeta pertenece. \"Ignorar\" lo descarta.",
     },
     {
-      title: "Actívala en Ajustes",
-      body: "Ve a Ajustes → Detección automática (Android) para instalar la app en tu teléfono y otorgar el permiso de notificaciones.",
+      target: "asistente-chips",
+      title: "Asigna con un toque",
+      body: "Toca el bolsillo (o la tarjeta) al que va el movimiento y lo registro al instante. Luego puedo recordar esa decisión: automático, con un toque, o preguntándote siempre.",
+    },
+    {
+      title: "Actívalo en Ajustes",
+      body: "Ve a Ajustes → Detección automática (Android) para instalar la app, elegir tus apps y otorgar el permiso de notificaciones.",
     },
   ],
   "/flows": [
@@ -185,7 +190,7 @@ export const GUIDE_REGISTRY: Record<string, GuideStep[]> = {
     {
       target: "settings-deteccion",
       title: "Detección automática (Android)",
-      body: "Descarga el APK y otorga acceso a notificaciones para que tus compras se registren solas en la Bandeja.",
+      body: "Descarga el APK, otorga acceso a notificaciones y elige de tu teléfono las apps de banco que usas (BBVA, Nu, Revolut y más). Solo se leen esas.",
     },
     {
       target: "settings-suscripcion",

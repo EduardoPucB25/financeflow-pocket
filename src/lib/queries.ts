@@ -149,6 +149,31 @@ export const counterpartiesQuery = () =>
     },
   });
 
+/** Reglas de asignación aprendidas por el asistente de movimientos.
+ * `detection_rules` aún no está en los tipos generados → cast local. */
+export const detectionRulesQuery = () =>
+  queryOptions({
+    queryKey: ["detection_rules"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("detection_rules" as any) as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        match_scope: "merchant" | "package";
+        match_value: string;
+        kind: string;
+        pocket_id: string | null;
+        debt_id: string | null;
+        counterparty_id: string | null;
+        mode: "auto" | "confirm" | "ask";
+        hit_count: number;
+      }>;
+    },
+  });
+
 export const transactionsQuery = () =>
   queryOptions({
     queryKey: ["transactions"],

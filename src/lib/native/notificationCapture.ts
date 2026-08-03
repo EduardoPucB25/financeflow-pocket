@@ -14,6 +14,11 @@ export interface BankNotificationEvent {
   timestamp: number;
 }
 
+export interface InstalledApp {
+  packageName: string;
+  label: string;
+}
+
 export interface NotificationCapturePlugin {
   isPermissionGranted(): Promise<{ granted: boolean }>;
   openPermissionSettings(): Promise<void>;
@@ -21,6 +26,8 @@ export interface NotificationCapturePlugin {
   setWatchedPackages(options: { packages: string[] }): Promise<void>;
   /** Opens a URL in the system browser (v3+ binaries; older ones reject). */
   openExternal(options: { url: string }): Promise<void>;
+  /** Lists launchable installed apps (v5+ binaries; older ones reject). */
+  getInstalledApps(): Promise<{ apps: InstalledApp[] }>;
   addListener(
     eventName: "bankNotification",
     listenerFunc: (event: BankNotificationEvent) => void,
@@ -48,6 +55,9 @@ export const NotificationCapture: NotificationCapturePlugin = isNativeAndroid()
       },
       async setWatchedPackages() {},
       async openExternal() {},
+      async getInstalledApps() {
+        return { apps: [] };
+      },
       addListener: async () => ({ remove: async () => {} }) as PluginListenerHandle,
     };
 

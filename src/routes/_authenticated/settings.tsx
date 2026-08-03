@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { profileQuery, subscriptionQuery, billingEventsQuery } from "@/lib/queries";
+import { profileQuery, subscriptionQuery, billingEventsQuery, detectionRulesQuery, pocketsQuery, debtsQuery } from "@/lib/queries";
+import { RULE_MODE_LABEL, type RuleMode } from "@/lib/detection/rules";
 import { deriveSubStatus } from "@/lib/subscription";
 import { getPaddleEnvironment } from "@/lib/paddle";
 import { createCustomerPortalSession } from "@/utils/billing.functions";
@@ -12,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +24,9 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNotificationCapture } from "@/hooks/useNotificationCapture";
+import { AppPicker } from "@/components/detection/AppPicker";
 import { UpdateCard } from "@/components/UpdateCard";
-import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown, Download, KeyRound, HelpCircle, RotateCcw } from "lucide-react";
+import { Smartphone, ShieldCheck, ShieldAlert, Lock, Crown, Download, KeyRound, HelpCircle, RotateCcw, Wand2, Trash2 } from "lucide-react";
 import { useGuideProgress } from "@/lib/guide/useGuideProgress";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -236,9 +237,155 @@ function SettingsPage() {
       <SubscriptionCard />
       <BillingHistoryCard />
       <AndroidDetectionCard />
+      <AssistantCard />
       <UpdateCard />
       <HelpResetCard />
     </div>
+  );
+}
+
+function AssistantCard() {
+  const { data: profile } = useQuery(profileQuery());
+  const { data: subscription } = useQuery(subscriptionQuery(profile?.id));
+  const { isPro } = deriveSubStatus(subscription);
+  const { data: rules } = useQuery(detectionRulesQuery());
+  const { data: pockets } = useQuery(pocketsQuery());
+  const { data: debts } = useQuery(debtsQuery());
+  const qc = useQueryClient();
+
+  // detection_* columns aren't in generated types yet — cast locally.
+  const prefs = profile as unknown as {
+    detection_autopilot?: boolean | null;
+    detection_default_mode?: RuleMode | null;
+  } | null;
+  const autopilot = prefs?.detection_autopilot ?? false;
+  const defaultMode: RuleMode = prefs?.detection_default_mode ?? "ask";
+
+  const savePrefs = useMutation({
+    mutationFn: async (patch: { detection_autopilot?: boolean; detection_default_mode?: RuleMode }) => {
+      if (!profile?.id) throw new Error("Sin perfil");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await supabase.from("profiles").update(patch as any).eq("id", profile.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  const updateRule = useMutation({
+    mutationFn: async (args: { id: string; mode: RuleMode }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from("detection_rules" as any) as any)
+        .update({ mode: args.mode, updated_at: new Date().toISOString() })
+        .eq("id", args.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["detection_rules"] }),
+  });
+
+  const deleteRule = useMutation({
+    mutationFn: async (id: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from("detection_rules" as any) as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["detection_rules"] });
+      toast.success("Regla eliminada");
+    },
+  });
+
+  if (!isPro) return null;
+
+  const targetLabel = (r: { pocket_id: string | null; debt_id: string | null }) => {
+    if (r.pocket_id) return pockets?.find((p) => p.id === r.pocket_id)?.name ?? "bolsillo";
+    if (r.debt_id) return debts?.find((d) => d.id === r.debt_id)?.name ?? "tarjeta";
+    return "—";
+  };
+
+  return (
+    <Card className="p-6 space-y-4 bg-card/70 backdrop-blur">
+      <div className="flex items-center gap-2">
+        <Wand2 className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Asistente de movimientos</h2>
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Label className="text-sm">Registrar automáticamente</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Aplica las reglas en modo “Registrar solo” apenas se detecta el movimiento, aunque no
+            abras la app. Siempre podrás deshacer.
+          </p>
+        </div>
+        <Switch
+          checked={autopilot}
+          onCheckedChange={(v) => savePrefs.mutate({ detection_autopilot: v })}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-sm">Modo por defecto para reglas nuevas</Label>
+        <Select
+          value={defaultMode}
+          onValueChange={(v) => savePrefs.mutate({ detection_default_mode: v as RuleMode })}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(["ask", "confirm", "auto"] as RuleMode[]).map((m) => (
+              <SelectItem key={m} value={m}>
+                {RULE_MODE_LABEL[m]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm">Reglas aprendidas ({rules?.length ?? 0})</Label>
+        {(rules?.length ?? 0) === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Aún no hay reglas. Cuando asignes un movimiento en el asistente, podrás pedir que lo
+            recuerde para la próxima.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border/40 rounded-md border border-border/60">
+            {rules!.map((r) => (
+              <li key={r.id} className="flex items-center gap-2 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm">
+                    <span className="font-medium">{r.match_value}</span>{" "}
+                    <span className="text-muted-foreground">→ {targetLabel(r)}</span>
+                  </div>
+                </div>
+                <Select value={r.mode} onValueChange={(v) => updateRule.mutate({ id: r.id, mode: v as RuleMode })}>
+                  <SelectTrigger className="h-8 w-[150px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(["ask", "confirm", "auto"] as RuleMode[]).map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {RULE_MODE_LABEL[m]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 text-muted-foreground"
+                  onClick={() => deleteRule.mutate(r.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -480,11 +627,6 @@ function AndroidDetectionCardInner() {
     refreshPermission,
     setWatchedPackages,
   } = useNotificationCapture(null);
-  const [draft, setDraft] = useState(watchedPackages.join("\n"));
-
-  useEffect(() => {
-    setDraft(watchedPackages.join("\n"));
-  }, [watchedPackages]);
 
   return (
     <Card data-guide="settings-deteccion" className="p-6 space-y-4 bg-card/70 backdrop-blur">
@@ -564,32 +706,11 @@ function AndroidDetectionCardInner() {
             </Button>
           </div>
 
-          <div className="space-y-2">
-            <Label>Apps vigiladas (una por línea)</Label>
-            <Textarea
-              rows={6}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              Usa el nombre de paquete (ej. <code>com.bbva.bbvacontigo</code>). Solo se capturan
-              notificaciones de estas apps.
-            </p>
-            <Button
-              size="sm"
-              onClick={async () => {
-                const list = draft
-                  .split(/\r?\n/)
-                  .map((s) => s.trim())
-                  .filter(Boolean);
-                await setWatchedPackages(list);
-                toast.success("Lista actualizada");
-              }}
-            >
-              Guardar apps
-            </Button>
-          </div>
+          <AppPicker
+            supported={supported}
+            watchedPackages={watchedPackages}
+            setWatchedPackages={setWatchedPackages}
+          />
         </>
       )}
     </Card>
