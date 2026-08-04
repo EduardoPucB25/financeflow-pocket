@@ -1,20 +1,51 @@
-## Diagnóstico
+# Detección de movimientos: bandeja más lista y selector de apps más simple
 
-El archivo de migración `supabase/migrations/20260728120000_add_debt_statements.sql` existe en el repositorio (llegó por el sync de GitHub), pero **la tabla nunca se creó en la base de datos**: la consulta a `public.debt_statements` responde `PGRST205 — Could not find the table`. El código del frontend (`StatementsDialog.tsx`, `debtStatementsQuery`) ya está completo y correcto; solo falta el respaldo en base de datos.
+## Lo que encontré al revisar el repo y la base de datos
 
-## Solución
+- Los últimos commits (`282cb39`, `5231a36`) sí traen el soporte de Revolut (parser nativo + clasificador web ES/EN) y el asistente de movimientos.
+- **Bloqueante real de la pantalla de error del celular:** las tablas del asistente nunca se aplicaron a la base. En la base existen 11 tablas y **no está `detection_rules`**, y en `profiles` **no existen** `detection_default_mode` ni `detection_autopilot`. Por eso sale "Could not find the table 'public.detection_rules'".
+- `detected_transactions` hoy solo guarda: monto, moneda, comercio, tipo, texto crudo, app y fecha de la notificación. No hay campo para quién envía, a qué cuenta llegó, ni la fecha/hora que viene escrita dentro del mensaje.
+- El selector de apps hoy lista todas las apps instaladas (24 de 108) mezcladas con las de banco, y muestra el nombre de paquete en cada renglón.
 
-1. Aplicar la migración de la tabla `debt_statements` con:
-   - Campos: deuda asociada, año y mes del periodo, monto, fecha de vencimiento, estado (pendiente/pagado), fecha de pago, movimiento vinculado y notas.
-   - Restricción de un solo estado de cuenta por deuda y mes.
-   - Permisos de acceso vía API y reglas de seguridad: cada usuario solo ve y gestiona sus propios estados de cuenta.
-   - Índices por usuario/vencimiento y por deuda, más actualización automática de la marca de tiempo.
+## Qué se va a hacer
 
-2. Regenerar los tipos de la base de datos y quitar los `as any` / el fallback silencioso de `debtStatementsQuery` en `src/lib/queries.ts`, ya que la tabla pasará a existir de verdad y conviene que los errores reales sí se muestren.
+### 1. Aplicar lo que falta en la base (primero, desbloquea la app)
+- Crear `detection_rules` con sus permisos y reglas de acceso (cada quien ve solo lo suyo).
+- Agregar a `profiles` las preferencias del asistente (modo por defecto y "registrar automáticamente").
+- Activar tiempo real en las detecciones para que aparezcan al instante en web y APK.
 
-3. Verificar en la preview: crear un estado de cuenta en una tarjeta, pagarlo desde un bolsillo y deshacer el pago, confirmando que saldo del bolsillo y de la deuda se ajustan.
+### 2. Guardar más datos de cada notificación
+Nuevos campos en las detecciones:
+- **Quién envía / recibe** (`sender_name`) y si ese nombre es el propio usuario (`is_self_transfer`).
+- **Cuenta o app destino** (`account_hint`, ej. "Nu", "BBVA ...1234").
+- **Fecha y hora leídas del mensaje** (`occurred_at`), separadas de la hora en que llegó la notificación.
+- **Dirección** (entrada / salida) y **confianza** de la lectura.
+- En `profiles`, una lista de **alias propios** (nombres con los que aparece el usuario en sus bancos) para reconocer traspasos entre sus propias cuentas.
 
-### Detalles técnicos
+### 3. Mejorar el lector de mensajes
+Ampliar el clasificador (`src/lib/detection/classify.ts`) para entender frases tipo
+`"Eduardo hizo una transferencia a tu cuenta Nu de 200 el 01/08/26 10:15"`:
+- Nombre de la persona/comercio (antes de "te envió", "hizo una transferencia", "de parte de", "from", "to").
+- Monto y moneda (ya funciona, se afina).
+- Fecha en formatos `01-08-26`, `01/08/2026`, `1 de agosto de 2026`, `hoy`, `ayer`, y hora `10:15`, `10:15 a.m.`.
+- Cuenta/banco mencionado en el texto.
+- Palabras clave de entrada/salida: pago, ingreso, te enviaron, enviaste, pagaste, recibiste, depósito, cobro, retiro, compra, más equivalentes en inglés (Revolut).
+- Perfiles por app para **BBVA, Nu, Revolut, DiDi y Mercado Pago** (agrego DiDi al catálogo y a la lista vigilada por defecto).
 
-- La migración es idéntica al SQL ya versionado en el repo (mismo nombre de archivo y contenido), por lo que el repositorio y la base quedan consistentes.
-- El pago sigue usando el trigger existente `tx_balance_sync` mediante una transacción `kind = 'payment'`; no se toca esa lógica.
+### 4. Selector de apps más limpio
+En Ajustes:
+- De inicio se muestran **solo las apps ya seleccionadas** (chips con nombre y logo/emoji, con opción de quitar).
+- Botón **"Agregar app"** abre un diálogo con **solo apps de banco o billetera**, mostrando el **nombre** (no el paquete). El filtro combina el catálogo conocido con las apps instaladas que hagan match por nombre/paquete de banco.
+- El campo de paquete manual queda escondido bajo "Avanzado", para casos raros.
+
+### 5. Bandeja de entrada más útil
+En `/inbox` cada detección mostrará: app, quién envía, monto, fecha/hora del mensaje, cuenta destino, y una etiqueta **"Entre mis cuentas"** cuando el nombre coincida con un alias propio. Un toque para elegir **bolsillo** (o deuda) y registrar, con la opción de recordar la regla como ya existe.
+
+## Nota sobre el aviso en el celular
+El "avisito de la app para registrar el movimiento" al llegar la transferencia necesita una notificación local del lado nativo (Android). Puedo dejar el código web listo y la pieza nativa escrita en `native/android/`, pero **el APK hay que recompilarlo localmente** para que aparezca esa notificación. Mientras tanto, con la app abierta seguirá saliendo el aviso emergente actual.
+
+## Detalles técnicos
+- Migración con `CREATE TABLE` + `GRANT` + RLS por usuario en `detection_rules`; `ALTER TABLE` para los nuevos campos de `detected_transactions` y `profiles`.
+- Se regeneran los tipos de la base y se eliminan los `as any` temporales de `useNotificationCapture.ts`.
+- Nuevo módulo `src/lib/detection/parse.ts` (nombre, fecha/hora, cuenta) usado tanto por el clasificador como por la bandeja; `apps.ts` gana `kind: "bank" | "wallet"` para filtrar el selector.
+- El parser nativo (`BankParsers.kt`) queda como primer vistazo; la lógica fina vive en el web para poder afinarla sin recompilar el APK.
