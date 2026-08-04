@@ -167,7 +167,7 @@ function InboxPage() {
         amount: d.amount,
         description: d.merchant || appLabelFor(d.package_name),
         notes: d.raw_text,
-        occurredAt: new Date(d.detected_at).toISOString(),
+        occurredAt: new Date(d.occurred_at ?? d.detected_at).toISOString(),
         pocketId,
         debtId,
         counterpartyId: null,
@@ -544,7 +544,10 @@ function ApproveDialog({
   const [pocketId, setPocketId] = useState<string>("none");
   const [counterpartyId, setCounterpartyId] = useState<string>("none");
   const [debtId, setDebtId] = useState<string>("none");
-  const [occurredAt, setOccurredAt] = useState(detected.detected_at.slice(0, 16));
+  const [occurredAt, setOccurredAt] = useState(
+    (detected.occurred_at ?? detected.detected_at).slice(0, 16),
+  );
+
 
   const approve = useMutation({
     mutationFn: async () => {
