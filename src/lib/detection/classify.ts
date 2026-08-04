@@ -9,6 +9,8 @@
  * Todas las palabras clave editables viven en este archivo, en un solo lugar.
  */
 
+import { parsePersonName, parseAccountHint, parseMessageDate } from "./parse";
+
 export type Direction = "in" | "out" | "unknown";
 export type TxKind = "income" | "expense" | "payment";
 
@@ -28,9 +30,16 @@ export interface Classification {
   amount: number | null;
   currency: string;
   merchant: string | null;
+  /** Persona o comercio que envía/recibe, si el mensaje lo dice. */
+  senderName: string | null;
+  /** Cuenta o banco mencionado ("Nu", "BBVA ···1234"). */
+  accountHint: string | null;
+  /** Fecha/hora leída DENTRO del mensaje (ISO) o null. */
+  occurredAt: string | null;
   /** 0..1 — qué tan seguros estamos de la dirección/tipo. */
   confidence: number;
 }
+
 
 // ---- Diccionarios (ES + EN) — editar aquí ---------------------------------
 
@@ -40,9 +49,11 @@ export const OUT_WORDS = [
   "transferiste", "transferi", "enviaste", "envie", "envio", "mandaste",
   "pagaste", "pague", "compra", "compraste", "cargo", "retiro", "retiraste",
   "gastaste", "debito", "cargamos", "realizaste un pago", "hiciste una compra",
+  "se realizo un cargo", "cargo por", "salida de dinero", "enviado a",
+  "transferencia enviada", "pago realizado", "pago exitoso", "viaje pagado",
   // inglés (Revolut y otras)
   "you sent", "you paid", "payment to", "purchase", "you spent", "spent at",
-  "withdrawal", "withdrew", "charged", "debited",
+  "withdrawal", "withdrew", "charged", "debited", "sent to",
 ];
 
 /** Dinero que ENTRA (ingreso / depósito / devolución). */
@@ -50,11 +61,14 @@ export const IN_WORDS = [
   // español
   "recibiste", "recibi", "recibo", "te depositaron", "deposito", "abono",
   "ingreso", "devolucion", "reembolso", "te enviaron", "cobraste", "recibida",
-  "abonamos", "recibimos",
+  "abonamos", "recibimos", "te transfirio", "te envio", "te ha enviado",
+  "hizo una transferencia a tu cuenta", "transferencia recibida",
+  "dinero disponible", "te llego", "acreditamos", "acreditado",
   // inglés
   "you received", "received", "deposit", "refund", "added to", "top-up",
-  "topped up", "cashback", "you got",
+  "topped up", "cashback", "you got", "money in",
 ];
+
 
 /** Pago de TU tarjeta/deuda (sale de un bolsillo y baja la deuda). */
 export const PAYMENT_WORDS = [
@@ -62,6 +76,18 @@ export const PAYMENT_WORDS = [
   "abono a tu credito", "pago de deuda", "pago a credito", "pago tdc",
   "pago a tu credito", "card payment", "credit card payment",
 ];
+
+/**
+ * Frases inequívocas de ENTRADA. Ganan sobre cualquier palabra de salida:
+ * "te envió", "hizo una transferencia a tu cuenta" contienen "envio"/
+ * "transfer", que de otro modo marcarían salida.
+ */
+export const STRONG_IN_WORDS = [
+  "te envio", "te enviaron", "te ha enviado", "te transfirio", "te deposito",
+  "te depositaron", "a tu cuenta", "recibiste", "transferencia recibida",
+  "abono a tu cuenta", "sent you", "you received", "received from",
+];
+
 
 // ---- Helpers --------------------------------------------------------------
 
@@ -152,8 +178,10 @@ export function classifyNotification(input: ClassifyInput): Classification {
   const hay = strip(original);
 
   const isPayment = hasAny(hay, PAYMENT_WORDS);
-  const inHit = hasAny(hay, IN_WORDS);
-  const outHit = hasAny(hay, OUT_WORDS);
+  const strongIn = hasAny(hay, STRONG_IN_WORDS);
+  const inHit = strongIn || hasAny(hay, IN_WORDS);
+  const outHit = !strongIn && hasAny(hay, OUT_WORDS);
+
 
   let direction: Direction;
   let kind: TxKind;
@@ -192,7 +220,8 @@ export function classifyNotification(input: ClassifyInput): Classification {
 
   const extracted = extractAmountAndCurrency(hay);
   const amount = input.hintedAmount ?? extracted.amount;
-  const merchant = input.hintedMerchant?.trim() || extractMerchant(original);
+  const senderName = parsePersonName(original);
+  const merchant = input.hintedMerchant?.trim() || extractMerchant(original) || senderName;
 
   return {
     direction,
@@ -200,6 +229,10 @@ export function classifyNotification(input: ClassifyInput): Classification {
     amount,
     currency: extracted.currency,
     merchant: merchant || null,
+    senderName,
+    accountHint: parseAccountHint(original),
+    occurredAt: parseMessageDate(original),
     confidence,
   };
 }
+

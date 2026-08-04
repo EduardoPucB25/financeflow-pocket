@@ -223,51 +223,69 @@ export type Database = {
       }
       detected_transactions: {
         Row: {
+          account_hint: string | null
           amount: number | null
           approved_transaction_id: string | null
+          confidence: number | null
           created_at: string
           currency: string
           dedupe_key: string | null
           detected_at: string
+          direction: string | null
           id: string
+          is_self_transfer: boolean
           merchant: string | null
           notification_title: string | null
+          occurred_at: string | null
           package_name: string
           raw_text: string
+          sender_name: string | null
           status: string
           type: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_hint?: string | null
           amount?: number | null
           approved_transaction_id?: string | null
+          confidence?: number | null
           created_at?: string
           currency?: string
           dedupe_key?: string | null
           detected_at?: string
+          direction?: string | null
           id?: string
+          is_self_transfer?: boolean
           merchant?: string | null
           notification_title?: string | null
+          occurred_at?: string | null
           package_name: string
           raw_text: string
+          sender_name?: string | null
           status?: string
           type?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_hint?: string | null
           amount?: number | null
           approved_transaction_id?: string | null
+          confidence?: number | null
           created_at?: string
           currency?: string
           dedupe_key?: string | null
           detected_at?: string
+          direction?: string | null
           id?: string
+          is_self_transfer?: boolean
           merchant?: string | null
           notification_title?: string | null
+          occurred_at?: string | null
           package_name?: string
           raw_text?: string
+          sender_name?: string | null
           status?: string
           type?: string
           updated_at?: string
@@ -279,6 +297,73 @@ export type Database = {
             columns: ["approved_transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      detection_rules: {
+        Row: {
+          counterparty_id: string | null
+          created_at: string
+          debt_id: string | null
+          hit_count: number
+          id: string
+          kind: string
+          match_scope: string
+          match_value: string
+          mode: string
+          pocket_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          counterparty_id?: string | null
+          created_at?: string
+          debt_id?: string | null
+          hit_count?: number
+          id?: string
+          kind?: string
+          match_scope?: string
+          match_value: string
+          mode?: string
+          pocket_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          counterparty_id?: string | null
+          created_at?: string
+          debt_id?: string | null
+          hit_count?: number
+          id?: string
+          kind?: string
+          match_scope?: string
+          match_value?: string
+          mode?: string
+          pocket_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detection_rules_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detection_rules_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detection_rules_pocket_id_fkey"
+            columns: ["pocket_id"]
+            isOneToOne: false
+            referencedRelation: "pockets"
             referencedColumns: ["id"]
           },
         ]
@@ -354,6 +439,8 @@ export type Database = {
           annual_yield_rate: number
           biweekly_salary: number
           created_at: string
+          detection_autopilot: boolean
+          detection_default_mode: string
           full_name: string | null
           global_spend_limit_monthly: number | null
           id: string
@@ -363,6 +450,7 @@ export type Database = {
           plan: string
           pro_expires_at: string | null
           salary_frequency: string
+          self_aliases: string[]
           terms_accepted_at: string | null
           updated_at: string
         }
@@ -370,6 +458,8 @@ export type Database = {
           annual_yield_rate?: number
           biweekly_salary?: number
           created_at?: string
+          detection_autopilot?: boolean
+          detection_default_mode?: string
           full_name?: string | null
           global_spend_limit_monthly?: number | null
           id: string
@@ -379,6 +469,7 @@ export type Database = {
           plan?: string
           pro_expires_at?: string | null
           salary_frequency?: string
+          self_aliases?: string[]
           terms_accepted_at?: string | null
           updated_at?: string
         }
@@ -386,6 +477,8 @@ export type Database = {
           annual_yield_rate?: number
           biweekly_salary?: number
           created_at?: string
+          detection_autopilot?: boolean
+          detection_default_mode?: string
           full_name?: string | null
           global_spend_limit_monthly?: number | null
           id?: string
@@ -395,6 +488,7 @@ export type Database = {
           plan?: string
           pro_expires_at?: string | null
           salary_frequency?: string
+          self_aliases?: string[]
           terms_accepted_at?: string | null
           updated_at?: string
         }

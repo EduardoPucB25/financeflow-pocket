@@ -22,6 +22,8 @@ export interface DetectionRule {
   debt_id: string | null;
   counterparty_id: string | null;
   mode: RuleMode;
+  hit_count?: number | null;
+
 }
 
 export interface DetectionLike {

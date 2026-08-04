@@ -82,7 +82,14 @@ type Detected = {
   notification_title: string | null;
   package_name: string;
   detected_at: string;
+  occurred_at?: string | null;
+  sender_name?: string | null;
+  account_hint?: string | null;
+  is_self_transfer?: boolean | null;
+  direction?: string | null;
+  confidence?: number | null;
   status: string;
+
 };
 
 type Pocket = { id: string; name: string };
@@ -392,17 +399,28 @@ function DetectionBubble({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Icon className="h-3.5 w-3.5" />
             {meta.label} · {appLabelFor(d.package_name)} ·{" "}
-            {new Date(d.detected_at).toLocaleString("es-MX")}
+            {new Date(d.occurred_at ?? d.detected_at).toLocaleString("es-MX")}
           </div>
           <p className="mt-1 text-sm">
             {hasAmount ? (
               <>
                 Detecté un <strong>{meta.label.toLowerCase()}</strong> de{" "}
                 <strong>{money(d.amount!)}</strong>
-                {d.merchant ? (
+                {d.sender_name ? (
+                  <>
+                    {" "}
+                    de <strong>{d.sender_name}</strong>
+                  </>
+                ) : d.merchant ? (
                   <>
                     {" "}
                     en <strong>{d.merchant}</strong>
+                  </>
+                ) : null}
+                {d.account_hint ? (
+                  <>
+                    {" "}
+                    hacia <strong>{d.account_hint}</strong>
                   </>
                 ) : null}
                 . {isIncome ? "¿A qué bolsillo entró?" : "¿De dónde salió?"}
@@ -414,7 +432,20 @@ function DetectionBubble({
               </>
             )}
           </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {d.is_self_transfer && (
+              <span className="rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px]">
+                Entre tus cuentas
+              </span>
+            )}
+            {d.confidence != null && d.confidence < 0.5 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                Baja certeza · revisa
+              </span>
+            )}
+          </div>
           <p className="text-[10px] text-muted-foreground/60 mt-1 line-clamp-1">{d.raw_text}</p>
+
         </div>
       </div>
 
