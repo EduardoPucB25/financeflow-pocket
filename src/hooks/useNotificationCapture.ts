@@ -17,6 +17,8 @@ import {
   type DetectionRule,
 } from "@/lib/detection/rules";
 import { appLabelFor } from "@/lib/detection/apps";
+import { isSelfName } from "@/lib/detection/parse";
+
 import { money } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -45,9 +47,23 @@ function detTypeFrom(cls: Classification, nativeType: string | null | undefined)
   return "charge";
 }
 
-// detection_rules / profiles.detection_autopilot aún no están en types.ts
-// (migraciones 20260803*). Casts locales hasta que Lovable regenere los tipos.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/** Perfil mínimo que necesita el asistente para decidir automatismos. */
+interface AssistantPrefs {
+  detection_autopilot: boolean;
+  self_aliases: string[];
+}
+
+async function loadPrefs(): Promise<AssistantPrefs> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("detection_autopilot, self_aliases")
+    .maybeSingle();
+  return {
+    detection_autopilot: data?.detection_autopilot ?? false,
+    self_aliases: data?.self_aliases ?? [],
+  };
+}
+
 
 /** Deshace un auto-registro: borra la tx (revierte saldos) y reabre la detección. */
 async function undoAutoApply(txId: string, detectedId: string, qc: QueryClient) {
@@ -80,18 +96,16 @@ async function maybeAutoApply(
 ): Promise<boolean> {
   if (amount == null || amount <= 0) return false;
   try {
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("detection_autopilot")
-      .maybeSingle();
-    if ((prof as any)?.detection_autopilot !== true) return false;
+    const { detection_autopilot } = await loadPrefs();
+    if (!detection_autopilot) return false;
 
-    const { data: rulesRaw } = await (supabase.from("detection_rules" as any) as any).select("*");
+    const { data: rulesRaw } = await supabase.from("detection_rules").select("*");
     const rule = matchRule(
       { merchant, package_name: event.packageName },
       (rulesRaw ?? []) as DetectionRule[],
     );
     if (!rule || rule.mode !== "auto") return false;
+
 
     const insert = buildTransactionInsert(userId, {
       kind: rule.kind || cls.kind,
@@ -114,9 +128,11 @@ async function maybeAutoApply(
       .from("detected_transactions")
       .update({ status: "approved", approved_transaction_id: tx.id })
       .eq("id", detectedId);
-    await (supabase.from("detection_rules" as any) as any)
-      .update({ hit_count: ((rule as any).hit_count ?? 0) + 1, updated_at: new Date().toISOString() })
+    await supabase
+      .from("detection_rules")
+      .update({ hit_count: (rule.hit_count ?? 0) + 1, updated_at: new Date().toISOString() })
       .eq("id", rule.id);
+
 
     qc.invalidateQueries({ queryKey: ["detected_transactions"] });
     qc.invalidateQueries({ queryKey: ["transactions"] });
@@ -133,7 +149,7 @@ async function maybeAutoApply(
     return false;
   }
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+
 
 /**
  * Bridge between the Android notification-listener plugin and Supabase.
@@ -205,7 +221,11 @@ export function useNotificationCapture(userId: string | null | undefined) {
             const currency = cls.currency ?? event.currency ?? "MXN";
             const merchant = cls.merchant ?? event.merchant ?? null;
             const detType = detTypeFrom(cls, event.type);
-            const occurredAtIso = new Date(event.timestamp || Date.now()).toISOString();
+            const notifiedAtIso = new Date(event.timestamp || Date.now()).toISOString();
+            // La fecha escrita en el mensaje manda; si no hay, la de la notificación.
+            const occurredAtIso = cls.occurredAt ?? notifiedAtIso;
+            const { self_aliases } = await loadPrefs();
+            const selfTransfer = isSelfName(cls.senderName, self_aliases);
             const dedupe = `${event.packageName}:${Math.floor(event.timestamp / 60000)}:${event.rawText.slice(0, 80)}`;
 
             const { data: inserted, error } = await supabase
@@ -219,13 +239,20 @@ export function useNotificationCapture(userId: string | null | undefined) {
                 raw_text: event.rawText,
                 notification_title: event.title ?? null,
                 package_name: event.packageName,
-                detected_at: occurredAtIso,
+                detected_at: notifiedAtIso,
+                occurred_at: occurredAtIso,
+                sender_name: cls.senderName,
+                account_hint: cls.accountHint,
+                is_self_transfer: selfTransfer,
+                direction: cls.direction,
+                confidence: cls.confidence,
                 dedupe_key: dedupe,
                 status: "pending",
               })
               .select("id")
               .single();
             if (error) {
+
               if (/duplicate key/i.test(error.message)) return; // ya registrada
               throw error;
             }
